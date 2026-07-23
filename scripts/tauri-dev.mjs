@@ -7,7 +7,6 @@ const server = spawn(process.execPath, ["scripts/dev-server.mjs"], {
 
 const cargo = spawn("cargo", ["run", "--manifest-path", "src-tauri/Cargo.toml"], {
   stdio: "inherit",
-  shell: process.platform === "win32",
   env: process.env,
 });
 
@@ -23,4 +22,3 @@ server.on("exit", (code) => {
 });
 process.on("SIGINT", () => shutdown(130));
 process.on("SIGTERM", () => shutdown(143));
-
