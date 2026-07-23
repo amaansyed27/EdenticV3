@@ -88,16 +88,86 @@ function contextsPanel(contexts) {
     </div>`;
 }
 
-function jobStrip(jobs) {
-  const active = jobs.find((job) => ["queued", "running"].includes(job.status));
+function activeJob(jobs) {
+  return jobs.find((job) => ["queued", "running"].includes(job.status));
+}
+
+export function jobStrip(jobs) {
+  const active = activeJob(jobs);
   if (!active) return "";
   return `
-    <div class="job-strip">
+    <div class="job-strip" data-job-id="${active.id}">
       <div class="job-progress" style="--progress:${Math.round(active.progress * 100)}%"></div>
       <span class="spinner"></span>
-      <strong>${escapeHtml(active.stage)}</strong>
-      <span>${Math.round(active.progress * 100)}%</span>
+      <strong data-job-stage>${escapeHtml(active.stage)}</strong>
+      <span data-job-percent>${Math.round(active.progress * 100)}%</span>
       <button class="text-button" type="button" data-action="cancel-job" data-job-id="${active.id}">Cancel</button>
+    </div>`;
+}
+
+export function applyWorkspaceTransientPatch(nextState, patch) {
+  const keys = Object.keys(patch ?? {});
+  if (!keys.length || keys.some((key) => !["jobs", "selectedSceneId"].includes(key))) return false;
+
+  if (Object.hasOwn(patch, "jobs")) {
+    const host = document.querySelector("#job-strip-host");
+    if (!host) return false;
+    const active = activeJob(nextState.jobs);
+    const strip = host.querySelector(".job-strip");
+    if (active && !strip) return false;
+    if (!active) {
+      host.innerHTML = "";
+    } else {
+      strip.dataset.jobId = active.id;
+      strip.querySelector(".job-progress")?.style.setProperty("--progress", `${Math.round(active.progress * 100)}%`);
+      const stage = strip.querySelector("[data-job-stage]");
+      const percent = strip.querySelector("[data-job-percent]");
+      const cancel = strip.querySelector('[data-action="cancel-job"]');
+      if (stage) stage.textContent = active.stage;
+      if (percent) percent.textContent = `${Math.round(active.progress * 100)}%`;
+      if (cancel) cancel.dataset.jobId = active.id;
+    }
+  }
+
+  if (Object.hasOwn(patch, "selectedSceneId")) {
+    document.querySelectorAll(".scene-row").forEach((row) => {
+      row.classList.toggle("active", row.dataset.sceneId === nextState.selectedSceneId);
+    });
+  }
+
+  return true;
+}
+
+function collapsedRail(action, iconName, label, direction) {
+  return `
+    <div class="collapsed-panel-rail">
+      <button class="collapsed-panel-button" type="button" data-action="${action}" aria-label="Open ${label}">
+        ${icon(direction === "left" ? "chevronRight" : "chevronLeft", 17)}
+        ${icon(iconName, 18)}
+        <span>${label}</span>
+      </button>
+    </div>`;
+}
+
+function deleteAssetDialog(state) {
+  const asset = state.assets.find((item) => item.id === state.assetDeleteId);
+  if (!asset) return "";
+  const busy = state.jobs.some((job) => job.assetId === asset.id && ["queued", "running"].includes(job.status));
+  return `
+    <div class="modal-layer" data-action="close-delete-asset">
+      <section class="dialog delete-asset-dialog" data-stop-propagation>
+        <div class="dialog-header">
+          <div><p class="eyebrow">PROJECT MEDIA</p><h2>Remove source?</h2></div>
+          <button class="icon-button" type="button" data-action="close-delete-asset" aria-label="Close">${icon("close", 19)}</button>
+        </div>
+        <p class="dialog-copy"><strong>${escapeHtml(asset.name)}</strong> will be removed from this project together with its proxy and Video Map data.</p>
+        <p class="delete-boundary">The original file at its external import location will not be touched.</p>
+        ${busy ? `<p class="delete-busy">Cancel indexing and wait for it to stop before removing this source.</p>` : ""}
+        <div class="dialog-footer">
+          <button class="button button-quiet" type="button" data-action="close-delete-asset">Cancel</button>
+          <button class="button button-danger" type="button" data-action="confirm-delete-asset" data-asset-id="${asset.id}" ${busy ? "disabled" : ""}>${icon("trash", 16)} Remove source</button>
+        </div>
+      </section>
     </div>`;
 }
 
@@ -111,6 +181,70 @@ export function renderWorkspace(state) {
     : null;
   const mediaUrl = selectedAsset ? toAssetUrl(selectedAsset.proxyPath || selectedAsset.managedPath) : "";
   const waveformUrl = selectedAsset ? toAssetUrl(selectedAsset.waveformPath) : "";
+  const gridClasses = [
+    "editor-grid",
+    state.mediaPanelCollapsed ? "media-panel-collapsed" : "",
+    state.videoMapPanelCollapsed ? "video-map-panel-collapsed" : "",
+  ].filter(Boolean).join(" ");
+
+  const mediaPanel = state.mediaPanelCollapsed
+    ? collapsedRail("toggle-media-panel", "media", "Media", "left")
+    : `
+      <div class="panel-header">
+        <div><p class="panel-kicker">PROJECT</p><h2>Media</h2></div>
+        <div class="panel-header-actions">
+          <button class="icon-button" type="button" data-action="import-media" aria-label="Import media">${icon("plus", 18)}</button>
+          <button class="icon-button panel-collapse-button" type="button" data-action="toggle-media-panel" aria-label="Collapse Media panel">${icon("chevronLeft", 18)}</button>
+        </div>
+      </div>
+      <label class="search-field media-search">
+        ${icon("search", 15)}
+        <input id="media-search" type="search" placeholder="Search media" aria-label="Search media" />
+      </label>
+      <div class="media-list">
+        ${state.assets.length
+          ? state.assets.map((asset) => assetItem(asset, asset.id === selectedAsset?.id)).join("")
+          : `
+            <div class="media-empty">
+              <span>${icon("upload", 25)}</span>
+              <h3>Bring in footage</h3>
+              <p>Originals are copied into this project.</p>
+              <button class="button button-primary" type="button" data-action="import-media">Import media</button>
+            </div>`}
+      </div>
+      <div class="media-panel-footer">
+        <span>${state.assets.length} ${state.assets.length === 1 ? "source" : "sources"}</span>
+        <button class="text-button" type="button" data-action="import-media">Import</button>
+      </div>`;
+
+  const mapPanel = state.videoMapPanelCollapsed
+    ? collapsedRail("toggle-video-map-panel", "spark", "Video Map", "right")
+    : `
+      <div class="panel-header map-header">
+        <div><p class="panel-kicker">SOURCE INTELLIGENCE</p><h2>Video Map</h2></div>
+        <div class="panel-header-actions">
+          <span class="local-badge">LOCAL</span>
+          <button class="icon-button panel-collapse-button" type="button" data-action="toggle-video-map-panel" aria-label="Collapse Video Map panel">${icon("chevronRight", 18)}</button>
+        </div>
+      </div>
+      <div class="map-tabs" role="tablist">
+        <button type="button" role="tab" data-action="map-tab" data-value="scenes" class="${state.videoMapTab === "scenes" ? "active" : ""}">Scenes <span>${scenes.length}</span></button>
+        <button type="button" role="tab" data-action="map-tab" data-value="transcript" class="${state.videoMapTab === "transcript" ? "active" : ""}">Transcript <span>${transcript.length}</span></button>
+        <button type="button" role="tab" data-action="map-tab" data-value="context" class="${state.videoMapTab === "context" ? "active" : ""}">Context <span>${state.contexts.length}</span></button>
+      </div>
+      ${state.videoMapTab === "transcript"
+        ? `<label class="search-field map-search">${icon("search", 15)}<input id="video-map-search" type="search" placeholder="Search transcript" value="${escapeHtml(state.videoMapQuery)}" /></label>`
+        : ""}
+      <div class="map-content">
+        ${state.videoMapTab === "scenes"
+          ? scenesPanel(state, scenes)
+          : state.videoMapTab === "transcript"
+            ? transcriptPanel(transcript, state.videoMapQuery)
+            : contextsPanel(state.contexts)}
+      </div>
+      <div class="map-footer">
+        <span>${icon("clock", 14)} ${selectedAsset?.indexStatus === "ready" ? "Index ready" : selectedAsset?.indexStatus === "partial" ? "Index ready with warnings" : "Awaiting local index"}</span>
+      </div>`;
 
   return `
     <main class="workspace-shell">
@@ -133,37 +267,13 @@ export function renderWorkspace(state) {
         </div>
       </header>
 
-      <div class="editor-grid">
-        <aside class="media-panel">
-          <div class="panel-header">
-            <div><p class="panel-kicker">PROJECT</p><h2>Media</h2></div>
-            <button class="icon-button" type="button" data-action="import-media" aria-label="Import media">${icon("plus", 18)}</button>
-          </div>
-          <label class="search-field media-search">
-            ${icon("search", 15)}
-            <input type="search" placeholder="Search media" aria-label="Search media" />
-          </label>
-          <div class="media-list">
-            ${state.assets.length
-              ? state.assets.map((asset) => assetItem(asset, asset.id === selectedAsset?.id)).join("")
-              : `
-                <div class="media-empty">
-                  <span>${icon("upload", 25)}</span>
-                  <h3>Bring in footage</h3>
-                  <p>Originals are copied into this project.</p>
-                  <button class="button button-primary" type="button" data-action="import-media">Import media</button>
-                </div>`}
-          </div>
-          <div class="media-panel-footer">
-            <span>${state.assets.length} ${state.assets.length === 1 ? "source" : "sources"}</span>
-            <button class="text-button" type="button" data-action="import-media">Import</button>
-          </div>
-        </aside>
+      <div class="${gridClasses}">
+        <aside class="media-panel ${state.mediaPanelCollapsed ? "collapsed" : ""}">${mediaPanel}</aside>
 
         <section class="viewer-panel">
           <div class="viewer-stage">
             ${selectedAsset
-              ? `<video id="source-player" src="${escapeHtml(mediaUrl)}" poster="${escapeHtml(toAssetUrl(selectedAsset.posterPath))}" preload="metadata"></video>`
+              ? `<video id="source-player" data-asset-id="${selectedAsset.id}" src="${escapeHtml(mediaUrl)}" ${selectedAsset.posterPath ? `poster="${escapeHtml(toAssetUrl(selectedAsset.posterPath))}"` : ""} preload="metadata" controls controlslist="nodownload" playsinline></video>`
               : `
                 <div class="viewer-empty">
                   <div class="viewer-empty-mark">${icon("play", 34)}</div>
@@ -182,13 +292,16 @@ export function renderWorkspace(state) {
                 <p class="panel-kicker">SELECTED SOURCE</p>
                 <h2>${selectedAsset ? escapeHtml(fileName(selectedAsset.name)) : "Nothing selected"}</h2>
               </div>
-              ${activeIndexJob
-                ? `<button class="button button-primary" type="button" disabled>${icon("spark", 16)} ${escapeHtml(activeIndexJob.stage)}</button>`
-                : selectedAsset && selectedAsset.indexStatus !== "ready"
-                  ? `<button class="button button-primary" type="button" data-action="index-asset" data-asset-id="${selectedAsset.id}">${icon("spark", 16)} Build Video Map</button>`
-                : selectedAsset
-                  ? `<button class="button button-quiet" type="button" data-action="index-asset" data-asset-id="${selectedAsset.id}">${icon("refresh", 15)} Reindex</button>`
-                  : ""}
+              <div class="source-overview-actions">
+                ${activeIndexJob
+                  ? `<button class="button button-primary" type="button" disabled>${icon("spark", 16)} ${escapeHtml(activeIndexJob.stage)}</button>`
+                  : selectedAsset && selectedAsset.indexStatus !== "ready"
+                    ? `<button class="button button-primary" type="button" data-action="index-asset" data-asset-id="${selectedAsset.id}">${icon("spark", 16)} Build Video Map</button>`
+                    : selectedAsset
+                      ? `<button class="button button-quiet" type="button" data-action="index-asset" data-asset-id="${selectedAsset.id}">${icon("refresh", 15)} Reindex</button>`
+                      : ""}
+                ${selectedAsset ? `<button class="icon-button source-delete-button" type="button" data-action="request-delete-asset" data-asset-id="${selectedAsset.id}" aria-label="Remove source">${icon("trash", 17)}</button>` : ""}
+              </div>
             </div>
             <div class="waveform-track">
               ${waveformUrl ? `<img src="${escapeHtml(waveformUrl)}" alt="Audio waveform" />` : `<div class="waveform-placeholder">${Array.from({ length: 72 }, (_, index) => `<i style="--h:${18 + ((index * 17) % 68)}%"></i>`).join("")}</div>`}
@@ -203,31 +316,9 @@ export function renderWorkspace(state) {
           </div>
         </section>
 
-        <aside class="video-map-panel">
-          <div class="panel-header map-header">
-            <div><p class="panel-kicker">SOURCE INTELLIGENCE</p><h2>Video Map</h2></div>
-            <span class="local-badge">LOCAL</span>
-          </div>
-          <div class="map-tabs" role="tablist">
-            <button type="button" role="tab" data-action="map-tab" data-value="scenes" class="${state.videoMapTab === "scenes" ? "active" : ""}">Scenes <span>${scenes.length}</span></button>
-            <button type="button" role="tab" data-action="map-tab" data-value="transcript" class="${state.videoMapTab === "transcript" ? "active" : ""}">Transcript <span>${transcript.length}</span></button>
-            <button type="button" role="tab" data-action="map-tab" data-value="context" class="${state.videoMapTab === "context" ? "active" : ""}">Context <span>${state.contexts.length}</span></button>
-          </div>
-          ${state.videoMapTab === "transcript"
-            ? `<label class="search-field map-search">${icon("search", 15)}<input id="video-map-search" type="search" placeholder="Search transcript" value="${escapeHtml(state.videoMapQuery)}" /></label>`
-            : ""}
-          <div class="map-content">
-            ${state.videoMapTab === "scenes"
-              ? scenesPanel(state, scenes)
-              : state.videoMapTab === "transcript"
-                ? transcriptPanel(transcript, state.videoMapQuery)
-                : contextsPanel(state.contexts)}
-          </div>
-          <div class="map-footer">
-            <span>${icon("clock", 14)} ${selectedAsset?.indexStatus === "ready" ? "Index ready" : "Awaiting local index"}</span>
-          </div>
-        </aside>
+        <aside class="video-map-panel ${state.videoMapPanelCollapsed ? "collapsed" : ""}">${mapPanel}</aside>
       </div>
-      ${jobStrip(state.jobs)}
-    </main>`;
+      <div id="job-strip-host" class="job-strip-host">${jobStrip(state.jobs)}</div>
+    </main>
+    ${deleteAssetDialog(state)}`;
 }
