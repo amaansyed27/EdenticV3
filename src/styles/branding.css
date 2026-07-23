@@ -19,12 +19,6 @@
   display: none !important;
 }
 
-:root[data-theme="dark"] .brand-mark,
-:root[data-theme="dark"] .project-placeholder::after,
-:root[data-theme="dark"] .empty-home-icon {
-  filter: invert(1);
-}
-
 .brand-lockup {
   min-height: 38px;
 }
