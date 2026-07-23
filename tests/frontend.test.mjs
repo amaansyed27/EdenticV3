@@ -71,6 +71,7 @@ test("official Edentic branding is wired for UI and packaged builds", async () =
   assert.match(branding, /edentic-combined-256w\.png/);
   assert.match(branding, /edentic-combined-512w\.png/);
   assert.match(branding, /edentic-icon-128x128\.png/);
+  assert.doesNotMatch(branding, /invert\(/);
   assert.match(buildScript, /brandingAssets/);
   assert.deepEqual(JSON.parse(tauriConfig).bundle.icon, ["icons/icon.ico"]);
 });
@@ -89,7 +90,7 @@ test("animated abstract logos are present on onboarding and home", async () => {
   assert.match(motion, /prefers-reduced-motion/);
 });
 
-test("logos and the native Windows icon adapt to the selected theme", async () => {
+test("logos and the native Windows icon adapt without recolouring the brand", async () => {
   const [index, adaptiveStyles, stateSource, nativeTheme, nativeLib, cargo] = await Promise.all([
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../src/styles/theme-adaptive.css", import.meta.url), "utf8"),
@@ -99,8 +100,10 @@ test("logos and the native Windows icon adapt to the selected theme", async () =
     readFile(new URL("../src-tauri/Cargo.toml", import.meta.url), "utf8"),
   ]);
   assert.match(index, /theme-adaptive\.css/);
-  assert.match(adaptiveStyles, /hue-rotate\(180deg\)/);
+  assert.match(adaptiveStyles, /drop-shadow\(1px 0 0/);
+  assert.doesNotMatch(adaptiveStyles, /invert\(|hue-rotate\(/);
   assert.match(stateSource, /sync_window_theme/);
+  assert.match(nativeTheme, /touches_logo/);
   assert.match(nativeTheme, /set_icon/);
   assert.match(nativeTheme, /set_theme/);
   assert.match(nativeLib, /theme::sync_window_theme/);
