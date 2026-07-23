@@ -71,7 +71,7 @@ fn create_poster(asset: &MediaAsset, project_path: &Path) -> Result<PathBuf, Str
     let scale = format!("scale={width}:{height}");
     let mut command = Command::new("ffmpeg");
     command
-        .args(["-hide_banner", "-loglevel", "error", "-y", "-ss", seek, "-i"])
+        .args(["-loglevel", "error", "-y", "-ss", seek, "-i"])
         .arg(&asset.managed_path)
         .args(["-frames:v", "1", "-vf", &scale, "-q:v", "3"])
         .arg(&output_path);
@@ -83,7 +83,7 @@ fn create_waveform(asset: &MediaAsset, project_path: &Path) -> Result<PathBuf, S
     let output_path = project_path.join("Cache/waveforms").join(format!("{}.svg", asset.id));
     let mut command = Command::new("ffmpeg");
     command
-        .args(["-hide_banner", "-loglevel", "error", "-i"])
+        .args(["-loglevel", "error", "-i"])
         .arg(&asset.managed_path)
         .args(["-vn", "-ac", "1", "-ar", "2000", "-f", "s16le", "-"]);
     let output = run_ffmpeg(&mut command, "Waveform decoding failed")?;
@@ -151,7 +151,7 @@ fn create_proxy(
     let run = |encoder: &str| {
         let mut command = Command::new("ffmpeg");
         command
-            .args(["-hide_banner", "-loglevel", "error", "-y", "-i"])
+            .args(["-loglevel", "error", "-y", "-i"])
             .arg(&asset.managed_path)
             .args(["-vf", &scale, "-c:v", encoder, "-pix_fmt", "yuv420p"]);
         if encoder == "h264_nvenc" {
@@ -179,7 +179,7 @@ fn create_proxy(
 
 fn scene_boundaries(asset: &MediaAsset) -> (Vec<f64>, bool) {
     let output = Command::new("ffmpeg")
-        .args(["-hide_banner", "-i"])
+        .arg("-i")
         .arg(&asset.managed_path)
         .args(["-vf", "select=gt(scene\\,0.32),showinfo", "-an", "-f", "null", "-"])
         .output();
@@ -229,15 +229,7 @@ fn create_scenes(asset: &MediaAsset, project_path: &Path) -> Vec<Scene> {
             let seek_value = format!("{seek:.3}");
             let mut command = Command::new("ffmpeg");
             command
-                .args([
-                    "-hide_banner",
-                    "-loglevel",
-                    "error",
-                    "-y",
-                    "-ss",
-                    &seek_value,
-                    "-i",
-                ])
+                .args(["-loglevel", "error", "-y", "-ss", &seek_value, "-i"])
                 .arg(&asset.managed_path)
                 .args(["-frames:v", "1", "-vf", &scale, "-q:v", "4"])
                 .arg(&thumbnail);
