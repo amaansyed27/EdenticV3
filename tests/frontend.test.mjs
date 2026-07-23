@@ -30,15 +30,28 @@ test("the working editor avoids gradient styling", async () => {
     "home.css",
     "workspace.css",
     "settings.css",
+    "recovery.css",
   ].map((file) => readFile(new URL(`../src/styles/${file}`, import.meta.url), "utf8")));
   assert.doesNotMatch(styles.join("\n"), /linear-gradient|radial-gradient|repeating-linear-gradient/);
 });
 
-test("all visible workspace actions are wired", async () => {
-  const workspace = await readFile(new URL("../src/app/views/workspace.js", import.meta.url), "utf8");
+test("all visible workspace and settings actions are wired", async () => {
+  const views = await Promise.all([
+    "workspace.js",
+    "overlays.js",
+  ].map((file) => readFile(new URL(`../src/app/views/${file}`, import.meta.url), "utf8")));
   const renderer = await readFile(new URL("../src/app/render.js", import.meta.url), "utf8");
-  const actions = [...workspace.matchAll(/data-action="([^"]+)"/g)].map((match) => match[1]);
+  const actions = [...views.join("\n").matchAll(/data-action="([^"]+)"/g)].map((match) => match[1]);
   for (const action of new Set(actions)) {
     assert.match(renderer, new RegExp(`action === "${action}"`), `Missing action handler for ${action}`);
+  }
+});
+
+test("recovery commands are connected through the native boundary", async () => {
+  const api = await readFile(new URL("../src/app/api.js", import.meta.url), "utf8");
+  const native = await readFile(new URL("../src-tauri/src/lib.rs", import.meta.url), "utf8");
+  for (const command of ["reset_settings", "reset_app_data", "reset_cache", "repair_app", "reset_all"]) {
+    assert.match(api, new RegExp(`invoke\\("${command}"\\)`));
+    assert.match(native, new RegExp(command));
   }
 });

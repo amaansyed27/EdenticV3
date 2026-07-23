@@ -2,6 +2,7 @@ mod commands;
 mod media;
 mod models;
 mod openrouter;
+mod recovery;
 mod storage;
 
 use models::{GlobalData, IndexJob};
@@ -48,8 +49,12 @@ pub fn run() {
             commands::delete_openrouter_key,
             commands::test_openrouter,
             commands::list_openrouter_models,
+            recovery::reset_settings,
+            recovery::reset_app_data,
+            recovery::reset_cache,
+            recovery::repair_app,
+            recovery::reset_all,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Edentic");
 }
-

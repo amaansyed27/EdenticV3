@@ -14,6 +14,11 @@ import {
   listOpenRouterModels,
   openProject,
   pickProject,
+  repairApp,
+  resetAll,
+  resetAppData,
+  resetCache,
+  resetSettings,
   saveOpenRouterKey,
   saveSettings,
   startIndex,
@@ -23,7 +28,7 @@ import { escapeHtml, formatDuration } from "./format.js";
 import { icon } from "./icons.js";
 import { applyTheme, notify, patchState, state } from "./state.js";
 import { renderCreateProject, renderHome, renderOnboarding } from "./views/home.js";
-import { renderContextDialog, renderSettings } from "./views/overlays.js";
+import { renderContextDialog, renderRecoveryDialog, renderSettings } from "./views/overlays.js";
 import { renderWorkspace } from "./views/workspace.js";
 
 const app = document.querySelector("#app");
@@ -47,7 +52,7 @@ export function renderApp() {
   } else {
     content = `<main class="error-screen"><h1>Edentic could not start.</h1><p>Check the terminal logs and try again.</p></main>`;
   }
-  app.innerHTML = `${content}${renderCreateProject(state)}${renderSettings(state)}${renderContextDialog(state)}${renderToast()}`;
+  app.innerHTML = `${content}${renderCreateProject(state)}${renderSettings(state)}${renderRecoveryDialog(state)}${renderContextDialog(state)}${renderToast()}`;
   bindPlayer();
 }
 
@@ -105,16 +110,96 @@ function startJobPolling() {
   }, 1100);
 }
 
+function clearedProjectState() {
+  return {
+    activeProject: null,
+    assets: [],
+    scenes: [],
+    transcript: [],
+    contexts: [],
+    jobs: [],
+    selectedAssetId: null,
+    selectedSceneId: null,
+  };
+}
+
+function recoveryMessage(report) {
+  const warnings = report.warnings?.length ?? 0;
+  return warnings ? `${report.message} · ${warnings} warning${warnings === 1 ? "" : "s"}` : report.message;
+}
+
+async function runRecovery(scope) {
+  const operations = {
+    settings: resetSettings,
+    data: resetAppData,
+    cache: resetCache,
+    repair: repairApp,
+    all: resetAll,
+  };
+  const operation = operations[scope];
+  if (!operation) throw new Error("Unknown recovery action");
+  const report = await operation();
+  const bootstrap = await getBootstrap();
+  applyTheme(bootstrap.settings.theme);
+
+  if (scope === "all") {
+    window.clearInterval(jobTimer);
+    patchState({
+      ...clearedProjectState(),
+      screen: "onboarding",
+      settings: bootstrap.settings,
+      hardware: bootstrap.hardware,
+      projects: [],
+      settingsOpen: false,
+      recoveryDialog: null,
+      openrouterModels: [],
+    });
+  } else if (scope === "data") {
+    window.clearInterval(jobTimer);
+    patchState({
+      ...clearedProjectState(),
+      screen: "home",
+      settings: bootstrap.settings,
+      hardware: bootstrap.hardware,
+      projects: bootstrap.projects,
+      settingsOpen: false,
+      recoveryDialog: null,
+      openrouterModels: [],
+    });
+  } else {
+    patchState({
+      settings: bootstrap.settings,
+      hardware: bootstrap.hardware,
+      projects: bootstrap.projects,
+      recoveryDialog: null,
+      settingsSection: "recovery",
+    });
+    if (state.activeProject && ["cache", "repair"].includes(scope)) {
+      await refreshProject();
+    }
+  }
+  notify(recoveryMessage(report), report.warnings?.length ? "neutral" : "success");
+}
+
 async function handleAction(action, element) {
   if (action === "new-project") patchState({ createProjectOpen: true });
   if (action === "close-create-project") patchState({ createProjectOpen: false });
   if (action === "open-settings") patchState({ settingsOpen: true });
-  if (action === "close-settings") patchState({ settingsOpen: false });
+  if (action === "close-settings") patchState({ settingsOpen: false, recoveryDialog: null });
   if (action === "settings-section") patchState({ settingsSection: element.dataset.value });
   if (action === "project-view") patchState({ projectView: element.dataset.value });
   if (action === "map-tab") patchState({ videoMapTab: element.dataset.value });
   if (action === "add-context") patchState({ contextDialogOpen: true });
   if (action === "close-context-dialog") patchState({ contextDialogOpen: false });
+  if (action === "request-recovery") patchState({ recoveryDialog: element.dataset.value });
+  if (action === "close-recovery") patchState({ recoveryDialog: null });
+  if (action === "confirm-recovery") {
+    const scope = element.dataset.value;
+    if (scope === "all" && document.querySelector("#reset-all-confirmation")?.value.trim() !== "RESET") {
+      return notify("Type RESET to confirm Reset All", "danger");
+    }
+    await runRecovery(scope);
+  }
   if (action === "go-home") {
     window.clearInterval(jobTimer);
     const bootstrap = await getBootstrap();
@@ -214,7 +299,7 @@ async function handleAction(action, element) {
     const settings = readSettingsForm();
     await saveSettings(settings);
     applyTheme(settings.theme);
-    patchState({ settings, settingsOpen: false });
+    patchState({ settings, settingsOpen: false, recoveryDialog: null });
     notify("Settings saved", "success");
   }
   if (action === "save-openrouter-key") {

@@ -125,6 +125,55 @@ function providersSettings(state) {
     </section>`;
 }
 
+const recoveryActions = [
+  {
+    id: "settings",
+    title: "Reset settings",
+    description: "Restore appearance, performance, media and provider preferences. Keeps the project location, recent projects and stored API key.",
+    button: "Reset",
+  },
+  {
+    id: "data",
+    title: "Reset data",
+    description: "Clear recent-project history, active processing state and the OpenRouter credential. Project folders and source media remain on disk.",
+    button: "Reset data",
+  },
+  {
+    id: "cache",
+    title: "Reset cache",
+    description: "Remove generated proxies, posters, waveforms, scene thumbnails and transcript indexes from known projects. Video Maps will need to be rebuilt.",
+    button: "Reset cache",
+  },
+  {
+    id: "repair",
+    title: "Repair",
+    description: "Recreate missing project folders, verify SQLite databases, clean broken derived-media references and remove missing projects from Recents.",
+    button: "Repair",
+  },
+  {
+    id: "all",
+    title: "Reset all",
+    description: "Reset settings and app data, clear generated caches, delete the provider credential and return Edentic to first-launch onboarding.",
+    button: "Reset all",
+    danger: true,
+  },
+];
+
+function recoverySettings() {
+  return `
+    <section class="settings-page">
+      <div class="settings-page-heading"><h2>Recovery</h2><p>Repair Edentic or selectively clear local state.</p></div>
+      <p class="recovery-boundary">Edentic will never delete a project folder or anything inside <code>Media\\Originals</code> through these controls.</p>
+      <div class="recovery-list">
+        ${recoveryActions.map((item) => `
+          <div class="recovery-row ${item.danger ? "danger" : ""}">
+            <div><h3>${item.title}</h3><p>${item.description}</p></div>
+            <button class="button ${item.danger ? "button-danger" : "button-quiet"}" type="button" data-action="request-recovery" data-value="${item.id}">${item.button}</button>
+          </div>`).join("")}
+      </div>
+    </section>`;
+}
+
 export function renderSettings(state) {
   if (!state.settingsOpen) return "";
   const active = state.settingsSection ?? "appearance";
@@ -134,7 +183,9 @@ export function renderSettings(state) {
       ? mediaSettings(state)
       : active === "providers"
         ? providersSettings(state)
-        : appearanceSettings(state);
+        : active === "recovery"
+          ? recoverySettings()
+          : appearanceSettings(state);
   return `
     <div class="modal-layer settings-layer">
       <section class="settings-dialog">
@@ -145,6 +196,7 @@ export function renderSettings(state) {
             ${settingNavItem("performance", "Performance", "waveform", active === "performance")}
             ${settingNavItem("media", "Media and cache", "folder", active === "media")}
             ${settingNavItem("providers", "AI providers", "spark", active === "providers")}
+            ${settingNavItem("recovery", "Recovery", "refresh", active === "recovery")}
           </nav>
           <div class="settings-future">
             <small>COMING WITH EDITING</small>
@@ -158,6 +210,29 @@ export function renderSettings(state) {
             <span>Settings save to this device.</span>
             <button class="button button-primary" type="button" data-action="save-settings">Done</button>
           </footer>
+        </div>
+      </section>
+    </div>`;
+}
+
+export function renderRecoveryDialog(state) {
+  if (!state.recoveryDialog) return "";
+  const item = recoveryActions.find((action) => action.id === state.recoveryDialog);
+  if (!item) return "";
+  const isResetAll = item.id === "all";
+  return `
+    <div class="modal-layer recovery-layer" data-action="close-recovery">
+      <section class="dialog recovery-dialog" data-stop-propagation>
+        <div class="dialog-header">
+          <div><p class="eyebrow">RECOVERY</p><h2>${item.title}?</h2></div>
+          <button class="icon-button" type="button" data-action="close-recovery" aria-label="Close">${icon("close", 19)}</button>
+        </div>
+        <p class="dialog-copy">${item.description}</p>
+        <p class="recovery-warning">Your project folders and original source media will not be deleted.</p>
+        ${isResetAll ? `<label class="field"><span>Type RESET to continue</span><input id="reset-all-confirmation" autocomplete="off" placeholder="RESET" /></label>` : ""}
+        <div class="dialog-footer">
+          <button class="button button-quiet" type="button" data-action="close-recovery">Cancel</button>
+          <button class="button ${item.danger ? "button-danger" : "button-primary"}" type="button" data-action="confirm-recovery" data-value="${item.id}">${item.button}</button>
         </div>
       </section>
     </div>`;

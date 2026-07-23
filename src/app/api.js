@@ -16,6 +16,10 @@ async function invoke(command, args = {}) {
   return window.__TAURI__.core.invoke(command, args);
 }
 
+function demoRecovery(message) {
+  return { message, projects: 0, files: 0, bytes: 0, warnings: [] };
+}
+
 export async function getBootstrap() {
   return demoMode() ? structuredClone(demoBootstrap) : invoke("get_bootstrap");
 }
@@ -115,4 +119,29 @@ export async function listOpenRouterModels() {
     ];
   }
   return invoke("list_openrouter_models");
+}
+
+export async function resetSettings() {
+  if (demoMode()) return demoRecovery("Settings restored to defaults");
+  return invoke("reset_settings");
+}
+
+export async function resetAppData() {
+  if (demoMode()) return demoRecovery("App data cleared · project folders were preserved");
+  return invoke("reset_app_data");
+}
+
+export async function resetCache() {
+  if (demoMode()) return demoRecovery("Generated cache cleared");
+  return invoke("reset_cache");
+}
+
+export async function repairApp() {
+  if (demoMode()) return demoRecovery("Repair completed");
+  return invoke("repair_app");
+}
+
+export async function resetAll() {
+  if (demoMode()) return demoRecovery("Edentic reset complete · onboarding will open next");
+  return invoke("reset_all");
 }

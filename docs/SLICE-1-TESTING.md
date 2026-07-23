@@ -77,6 +77,22 @@ npm run tauri:dev
 - [ ] Delete Key removes the stored credential.
 - [ ] `openrouter/free` remains the default model.
 
+## F. Recovery
+
+Create and index a disposable project before testing these controls.
+
+- [ ] Settings contains a Recovery section with Reset, Reset data, Reset cache, Repair and Reset all.
+- [ ] Every action opens a confirmation dialog before changing anything.
+- [ ] Reset restores preference defaults while preserving the selected projects folder, Recents and OpenRouter key.
+- [ ] Reset data clears Recents and the OpenRouter key but leaves every project folder and original source file on disk.
+- [ ] Reset cache removes `Cache`, `Proxies` and `Edit\index-data` contents, recreates the folder structure and marks sources for Video Map rebuilding.
+- [ ] Reset cache does not remove `Media\Originals`, project context, manifests or SQLite project data.
+- [ ] Repair recreates missing standard folders, checks project databases and removes missing projects from Recents.
+- [ ] Reset all requires typing `RESET`.
+- [ ] Reset all returns directly to first-launch onboarding.
+- [ ] Reset all leaves project folders and `Media\Originals` intact.
+- [ ] Reopen a preserved project folder after Reset data or Reset all and confirm it still works.
+
 ## What to send back for a failure
 
 - Screenshot or screen recording
@@ -85,4 +101,3 @@ npm run tauri:dev
 - PowerShell/Tauri terminal output
 - Source file type, duration and resolution
 - Whether the problem remains after reopening the project
-
