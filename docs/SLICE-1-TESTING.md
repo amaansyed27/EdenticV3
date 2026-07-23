@@ -28,11 +28,15 @@ npm test
 npm run tauri:dev
 ```
 
-## A. First launch and home
+## A. First launch, branding and home
 
 - [ ] First launch asks for the projects folder.
 - [ ] Choosing a folder and continuing creates it when necessary.
 - [ ] Edentic reopens to the home screen without asking again.
+- [ ] The startup screen, onboarding and home header use the combined Edentic logo rather than a recreated CSS mark.
+- [ ] The workspace header and Settings use the abstract Edentic icon.
+- [ ] The new Edentic icon appears in the Windows window/taskbar and installer metadata.
+- [ ] Logos remain visible without white boxes in both Dark and Light themes.
 - [ ] Dark mode is warm dark gray/light black, not blue.
 - [ ] Light mode is beige-white with gold accents.
 - [ ] The home screen has New Project, Open Project, search, view controls, recent projects and Settings.

@@ -7,6 +7,9 @@ const port = Number(process.env.EDENTIC_DEV_PORT || 1420);
 const types = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
+  ".ico": "image/x-icon",
+  ".jpeg": "image/jpeg",
+  ".jpg": "image/jpeg",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".png": "image/png",
@@ -28,4 +31,3 @@ createServer((request, response) => {
 }).listen(port, "127.0.0.1", () => {
   process.stdout.write(`Edentic frontend ready at http://127.0.0.1:${port}\n`);
 });
-

@@ -31,6 +31,7 @@ test("the working editor avoids gradient styling", async () => {
     "workspace.css",
     "settings.css",
     "recovery.css",
+    "branding.css",
   ].map((file) => readFile(new URL(`../src/styles/${file}`, import.meta.url), "utf8")));
   assert.doesNotMatch(styles.join("\n"), /linear-gradient|radial-gradient|repeating-linear-gradient/);
 });
@@ -54,4 +55,20 @@ test("recovery commands are connected through the native boundary", async () => 
     assert.match(api, new RegExp(`invoke\\("${command}"\\)`));
     assert.match(native, new RegExp(command));
   }
+});
+
+test("official Edentic branding is wired for UI and packaged builds", async () => {
+  const [index, branding, buildScript, tauriConfig] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../src/styles/branding.css", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/build-frontend.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../src-tauri/tauri.conf.json", import.meta.url), "utf8"),
+  ]);
+  assert.match(index, /favicon-32x32\.png/);
+  assert.match(index, /branding\.css/);
+  assert.match(branding, /edentic-combined-256w\.png/);
+  assert.match(branding, /edentic-combined-512w\.png/);
+  assert.match(branding, /edentic-icon-128x128\.png/);
+  assert.match(buildScript, /brandingAssets/);
+  assert.deepEqual(JSON.parse(tauriConfig).bundle.icon, ["../assets/icon/edentic-favicon.ico"]);
 });

@@ -1,0 +1,109 @@
+.brand-mark {
+  background-color: transparent !important;
+  background-image: url("/assets/icon/png/transparent/edentic-icon-128x128.png");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  border-radius: 0;
+  display: inline-block;
+  flex: 0 0 auto;
+  height: 24px;
+  overflow: visible;
+  position: relative;
+  transform: none !important;
+  width: 24px;
+}
+
+.brand-mark::after,
+.brand-mark i {
+  display: none !important;
+}
+
+:root[data-theme="dark"] .brand-mark,
+:root[data-theme="dark"] .project-placeholder::after,
+:root[data-theme="dark"] .empty-home-icon {
+  filter: invert(1);
+}
+
+.brand-lockup {
+  min-height: 38px;
+}
+
+.brand-lockup .brand-mark {
+  background-image: url("/assets/combined/png/transparent/edentic-combined-256w.png");
+  background-position: left center;
+  height: 38px;
+  width: 132px;
+}
+
+.brand-lockup > span:last-child,
+.onboarding-brand > span:last-child,
+.boot-screen > p {
+  display: none;
+}
+
+.onboarding-brand .brand-mark {
+  background-image: url("/assets/combined/png/transparent/edentic-combined-512w.png");
+  background-position: left center;
+  height: 64px;
+  width: 210px;
+}
+
+.boot-screen .brand-mark {
+  background-image: url("/assets/combined/png/transparent/edentic-combined-512w.png");
+  height: 66px;
+  width: 218px;
+}
+
+.editor-brand-mark {
+  height: 27px;
+  width: 27px;
+}
+
+.settings-nav-heading .brand-mark {
+  height: 25px;
+  width: 25px;
+}
+
+.project-placeholder-line,
+.project-placeholder-sun,
+.project-placeholder-horizon {
+  display: none;
+}
+
+.project-placeholder::after {
+  background-image: url("/assets/icon/png/transparent/edentic-icon-128x128.png");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  content: "";
+  height: 34%;
+  left: 50%;
+  opacity: 0.16;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 34%;
+}
+
+.empty-home-icon {
+  background-image: url("/assets/icon/png/transparent/edentic-icon-128x128.png");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 30px 30px;
+}
+
+.empty-home-icon .icon {
+  visibility: hidden;
+}
+
+@media (max-width: 760px) {
+  .brand-lockup .brand-mark {
+    width: 118px;
+  }
+
+  .onboarding-brand .brand-mark {
+    height: 54px;
+    width: 178px;
+  }
+}
