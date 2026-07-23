@@ -1,0 +1,365 @@
+.settings-layer {
+  background: rgba(0,0,0,.68);
+}
+
+.settings-dialog {
+  background: var(--bg-raised);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  display: grid;
+  grid-template-columns: 205px minmax(0, 1fr);
+  height: min(690px, calc(100vh - 54px));
+  overflow: hidden;
+  width: min(960px, calc(100vw - 54px));
+}
+
+.settings-nav {
+  background: var(--bg-sunken);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  padding: 17px 11px;
+}
+
+.settings-nav-heading {
+  align-items: center;
+  display: flex;
+  gap: 9px;
+  padding: 2px 8px 18px;
+}
+
+.settings-nav nav {
+  display: grid;
+  gap: 3px;
+}
+
+.settings-nav nav button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  display: flex;
+  gap: 9px;
+  height: 36px;
+  padding: 0 9px;
+  text-align: left;
+}
+
+.settings-nav nav button:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.settings-nav nav button.active {
+  background: var(--surface-active);
+  color: var(--text);
+}
+
+.settings-nav nav button.active .icon {
+  color: var(--gold);
+}
+
+.settings-future {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 9px;
+  margin: auto 8px 0;
+  padding-top: 15px;
+}
+
+.settings-future small {
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: .08em;
+}
+
+.settings-future span {
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.settings-main {
+  display: grid;
+  grid-template-rows: 44px minmax(0, 1fr) 58px;
+  min-width: 0;
+}
+
+.settings-close-row {
+  align-items: center;
+  display: flex;
+  justify-content: flex-end;
+  padding: 7px 11px;
+}
+
+.settings-scroll {
+  overflow: auto;
+  padding: 0 clamp(28px, 5vw, 62px) 45px;
+}
+
+.settings-page {
+  display: grid;
+  gap: 30px;
+}
+
+.settings-page-heading {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 21px;
+}
+
+.settings-page-heading h2 {
+  font-size: 27px;
+}
+
+.settings-page-heading p {
+  color: var(--text-muted);
+  margin-top: 7px;
+}
+
+.settings-group {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-group > h3 {
+  font-size: 13px;
+}
+
+.theme-options {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.theme-option {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: grid;
+  gap: 5px;
+  padding: 9px;
+  text-align: left;
+}
+
+.theme-option.active {
+  border-color: var(--gold);
+}
+
+.theme-option strong,
+.theme-option small {
+  padding-inline: 3px;
+}
+
+.theme-option small {
+  color: var(--text-faint);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.theme-preview {
+  background: #151515;
+  border: 1px solid #323232;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: 30% 1fr;
+  height: 70px;
+  padding: 7px;
+  position: relative;
+}
+
+.theme-preview i {
+  background: #222;
+  display: block;
+}
+
+.theme-preview i:first-child {
+  grid-row: span 2;
+}
+
+.theme-preview i:last-child {
+  background: #e5b63e;
+  height: 4px;
+  margin-top: auto;
+}
+
+.theme-preview.light {
+  background: #f3eee3;
+  border-color: #d7cebf;
+}
+
+.theme-preview.light i {
+  background: #e2dacc;
+}
+
+.theme-preview.system {
+  background: #151515;
+}
+
+.theme-preview.system::after {
+  background: #f3eee3;
+  content: "";
+  inset: 0 0 0 50%;
+  position: absolute;
+}
+
+.radio-list {
+  border-bottom: 1px solid var(--line);
+}
+
+.radio-list label {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 11px;
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: 12px 3px;
+}
+
+.radio-list input {
+  accent-color: var(--gold);
+}
+
+.radio-list span {
+  display: grid;
+  gap: 4px;
+}
+
+.radio-list small {
+  color: var(--text-faint);
+}
+
+.diagnostic-list {
+  border-top: 1px solid var(--line);
+  margin: 0;
+}
+
+.diagnostic-list div {
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  padding: 10px 2px;
+}
+
+.diagnostic-list dt {
+  color: var(--text-faint);
+}
+
+.diagnostic-list dd {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  margin: 0;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inline-field {
+  display: flex;
+  gap: 8px;
+}
+
+.inline-field input {
+  min-width: 0;
+}
+
+.suffix-input {
+  position: relative;
+}
+
+.suffix-input input {
+  padding-right: 40px;
+}
+
+.suffix-input span {
+  color: var(--text-faint);
+  position: absolute;
+  right: 11px;
+  top: 11px;
+}
+
+.provider-heading {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+}
+
+.provider-logo {
+  align-items: center;
+  background: var(--text);
+  border-radius: var(--radius-sm);
+  color: var(--bg);
+  display: flex;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  height: 42px;
+  justify-content: center;
+}
+
+.provider-heading p {
+  color: var(--text-faint);
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.connection-state {
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.connection-state.connected {
+  color: var(--success);
+}
+
+.privacy-note {
+  align-items: start;
+  background: var(--gold-soft);
+  border-left: 2px solid var(--gold);
+  color: var(--text-muted);
+  display: flex;
+  font-size: 11px;
+  gap: 8px;
+  line-height: 1.5;
+  padding: 10px 11px;
+}
+
+.privacy-note .icon {
+  color: var(--gold);
+  margin-top: 1px;
+}
+
+.provider-actions {
+  display: flex;
+  justify-content: space-between;
+}
+
+.settings-footer {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+}
+
+.settings-footer span {
+  color: var(--text-faint);
+  font-size: 10px;
+}
+
+.context-dialog {
+  width: min(700px, calc(100vw - 42px));
+}
+
+@media (max-width: 760px) {
+  .settings-dialog {
+    grid-template-columns: 160px minmax(0, 1fr);
+  }
+  .theme-options {
+    grid-template-columns: 1fr;
+  }
+}
