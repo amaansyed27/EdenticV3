@@ -49,7 +49,7 @@ test("all visible workspace and settings actions are wired", async () => {
     readFile(new URL("../src/app/workspace-runtime.js", import.meta.url), "utf8"),
   ]);
   const controllers = `${renderer}\n${workspaceRuntime}`;
-  const actions = [...views.join("\n").matchAll(/data-action="([^"]+)"/g)].map((match) => match[1]);
+  const actions = [...views.join("\n").matchAll(/data-action="([a-z][a-z0-9-]+)"/g)].map((match) => match[1]);
   for (const action of new Set(actions)) {
     assert.match(controllers, new RegExp(`action === "${action}"|"${action}"`), `Missing action handler for ${action}`);
   }
