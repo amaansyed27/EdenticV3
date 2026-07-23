@@ -1,0 +1,232 @@
+.home-intro-actions {
+  align-items: center;
+  display: flex;
+  gap: clamp(20px, 3vw, 42px);
+}
+
+.home-logo-motion {
+  align-items: center;
+  display: grid;
+  flex: 0 0 auto;
+  height: 104px;
+  justify-items: center;
+  opacity: 0.86;
+  position: relative;
+  width: 104px;
+}
+
+.home-logo-motion-orbit {
+  border: 1px solid var(--line);
+  border-left-color: transparent;
+  border-radius: 50%;
+  border-top-color: var(--gold-line);
+  inset: 5px;
+  position: absolute;
+  animation: edentic-logo-orbit 20s linear infinite;
+}
+
+.home-logo-motion-orbit::after {
+  background: var(--gold);
+  border-radius: 50%;
+  content: "";
+  height: 5px;
+  left: 50%;
+  position: absolute;
+  top: -3px;
+  transform: translateX(-50%);
+  width: 5px;
+}
+
+.home-logo-motion-mark {
+  animation: edentic-home-logo-float 6.5s ease-in-out infinite;
+  display: block;
+  height: 72px;
+  width: 72px;
+}
+
+.home-logo-motion img,
+.onboarding-logo-motion img {
+  display: block;
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+
+.onboarding-art {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+.onboarding-logo-motion {
+  align-items: center;
+  aspect-ratio: 1;
+  display: grid;
+  justify-items: center;
+  max-height: 620px;
+  position: relative;
+  width: min(76vh, 38vw, 560px);
+}
+
+.onboarding-logo-motion::before,
+.onboarding-logo-motion::after {
+  content: "";
+  position: absolute;
+  background: var(--line);
+  opacity: 0.72;
+}
+
+.onboarding-logo-motion::before {
+  height: 1px;
+  left: -12%;
+  right: -12%;
+}
+
+.onboarding-logo-motion::after {
+  bottom: -12%;
+  top: -12%;
+  width: 1px;
+}
+
+.onboarding-logo-orbit {
+  animation: edentic-logo-orbit 24s linear infinite;
+  border: 1px solid var(--line-strong);
+  border-bottom-color: transparent;
+  border-left-color: var(--gold-line);
+  border-radius: 50%;
+  inset: 1%;
+  position: absolute;
+}
+
+.onboarding-logo-orbit::before,
+.onboarding-logo-orbit::after {
+  background: var(--gold);
+  border-radius: 50%;
+  content: "";
+  position: absolute;
+}
+
+.onboarding-logo-orbit::before {
+  height: 7px;
+  left: 15%;
+  top: 11%;
+  width: 7px;
+}
+
+.onboarding-logo-orbit::after {
+  bottom: 7%;
+  height: 4px;
+  right: 22%;
+  width: 4px;
+}
+
+.onboarding-logo-inner-ring {
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  inset: 12%;
+  position: absolute;
+}
+
+.onboarding-logo-reveal {
+  animation: edentic-logo-reveal 900ms cubic-bezier(.18, .82, .22, 1) both;
+  display: block;
+  height: 70%;
+  width: 70%;
+  z-index: 1;
+}
+
+.onboarding-logo-float {
+  animation: edentic-onboarding-logo-float 8s ease-in-out 900ms infinite;
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.onboarding-logo-float img {
+  filter: drop-shadow(0 24px 34px rgba(0, 0, 0, 0.24));
+}
+
+:root[data-theme="light"] .onboarding-logo-float img {
+  filter: drop-shadow(0 20px 30px rgba(69, 55, 28, 0.14));
+}
+
+@keyframes edentic-logo-reveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.72) rotate(-8deg);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.035) rotate(1deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+@keyframes edentic-logo-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes edentic-onboarding-logo-float {
+  0%, 100% {
+    transform: translateY(-8px) rotate(-1.4deg);
+  }
+  50% {
+    transform: translateY(9px) rotate(1.4deg);
+  }
+}
+
+@keyframes edentic-home-logo-float {
+  0%, 100% {
+    transform: translateY(-3px) rotate(-2deg) scale(0.98);
+  }
+  50% {
+    transform: translateY(4px) rotate(2deg) scale(1.02);
+  }
+}
+
+@media (max-width: 1120px) {
+  .home-intro-actions {
+    gap: 18px;
+  }
+
+  .home-logo-motion {
+    height: 86px;
+    width: 86px;
+  }
+
+  .home-logo-motion-mark {
+    height: 58px;
+    width: 58px;
+  }
+}
+
+@media (max-width: 900px) {
+  .home-logo-motion {
+    display: none;
+  }
+
+  .onboarding-art {
+    inset: 0;
+    opacity: 0.14;
+  }
+
+  .onboarding-logo-motion {
+    left: 28%;
+    width: min(68vw, 470px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-logo-motion-orbit,
+  .home-logo-motion-mark,
+  .onboarding-logo-orbit,
+  .onboarding-logo-reveal,
+  .onboarding-logo-float {
+    animation: none !important;
+  }
+}
