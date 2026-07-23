@@ -39,6 +39,11 @@ window.addEventListener("keydown", (event) => {
   }
 });
 
+const systemTheme = window.matchMedia("(prefers-color-scheme: light)");
+systemTheme.addEventListener?.("change", () => {
+  if (state.settings.theme === "system") applyTheme("system");
+});
+
 window.addEventListener("edentic:native-error", (event) => {
   patchState({ toast: { tone: "danger", message: event.detail } });
 });

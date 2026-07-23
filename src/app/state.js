@@ -30,14 +30,10 @@ export const state = {
   selectedAssetId: null,
   selectedSceneId: null,
   settingsOpen: false,
-  settingsSection: "appearance",
-  recoveryDialog: null,
   createProjectOpen: false,
-  contextDialogOpen: false,
   toast: null,
   loading: false,
   projectView: "grid",
-  projectQuery: "",
   videoMapTab: "scenes",
   videoMapQuery: "",
   openrouterModels: [],
@@ -55,14 +51,28 @@ export function patchState(patch) {
   for (const listener of subscribers) listener(state);
 }
 
+export function resolveTheme(theme) {
+  if (theme !== "system") return theme;
+  return matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
+function syncNativeTheme(resolvedTheme) {
+  const invoke = globalThis.window?.__TAURI__?.core?.invoke;
+  if (!invoke) return;
+  invoke("sync_window_theme", { theme: resolvedTheme }).catch((error) => {
+    globalThis.window?.dispatchEvent(new CustomEvent("edentic:native-error", {
+      detail: error instanceof Error ? error.message : String(error),
+    }));
+  });
+}
+
 export function applyTheme(theme) {
-  const resolved = theme === "system"
-    ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
-    : theme;
+  const resolved = resolveTheme(theme);
   document.documentElement.dataset.theme = resolved;
   document.documentElement.dataset.themePreference = theme;
   const meta = document.querySelector('meta[name="theme-color"]');
   meta?.setAttribute("content", resolved === "light" ? "#f3eee3" : "#151515");
+  syncNativeTheme(resolved);
 }
 
 export function notify(message, tone = "neutral") {

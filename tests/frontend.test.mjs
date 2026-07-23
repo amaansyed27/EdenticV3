@@ -32,7 +32,6 @@ test("the working editor avoids gradient styling", async () => {
     "settings.css",
     "recovery.css",
     "branding.css",
-    "logo-motion.css",
   ].map((file) => readFile(new URL(`../src/styles/${file}`, import.meta.url), "utf8")));
   assert.doesNotMatch(styles.join("\n"), /linear-gradient|radial-gradient|repeating-linear-gradient/);
 });
@@ -71,7 +70,7 @@ test("official Edentic branding is wired for UI and packaged builds", async () =
   assert.match(branding, /edentic-combined-512w\.png/);
   assert.match(branding, /edentic-icon-128x128\.png/);
   assert.match(buildScript, /brandingAssets/);
-  assert.deepEqual(JSON.parse(tauriConfig).bundle.icon, ["../assets/icon/edentic-favicon.ico"]);
+  assert.deepEqual(JSON.parse(tauriConfig).bundle.icon, ["icons/icon.ico"]);
 });
 
 test("animated abstract logos are present on onboarding and home", async () => {
@@ -86,4 +85,22 @@ test("animated abstract logos are present on onboarding and home", async () => {
   assert.match(home, /logo-motion-sheen/);
   assert.match(motion, /mask-image/);
   assert.match(motion, /prefers-reduced-motion/);
+});
+
+test("logos and the native Windows icon adapt to the selected theme", async () => {
+  const [index, adaptiveStyles, stateSource, nativeTheme, nativeLib, cargo] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../src/styles/theme-adaptive.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/app/state.js", import.meta.url), "utf8"),
+    readFile(new URL("../src-tauri/src/theme.rs", import.meta.url), "utf8"),
+    readFile(new URL("../src-tauri/src/lib.rs", import.meta.url), "utf8"),
+    readFile(new URL("../src-tauri/Cargo.toml", import.meta.url), "utf8"),
+  ]);
+  assert.match(index, /theme-adaptive\.css/);
+  assert.match(adaptiveStyles, /hue-rotate\(180deg\)/);
+  assert.match(stateSource, /sync_window_theme/);
+  assert.match(nativeTheme, /set_icon/);
+  assert.match(nativeTheme, /set_theme/);
+  assert.match(nativeLib, /theme::sync_window_theme/);
+  assert.match(cargo, /image-png/);
 });

@@ -4,12 +4,14 @@ mod models;
 mod openrouter;
 mod recovery;
 mod storage;
+mod theme;
 
 use models::{GlobalData, IndexJob};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
+use tauri::Manager;
 
 pub struct RuntimeState {
     pub data: Mutex<GlobalData>,
@@ -29,6 +31,12 @@ impl RuntimeState {
 pub fn run() {
     tauri::Builder::default()
         .manage(RuntimeState::new())
+        .setup(|app| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = theme::apply_window_theme(&window, "dark");
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::get_bootstrap,
             commands::choose_projects_root,
@@ -54,6 +62,7 @@ pub fn run() {
             recovery::reset_cache,
             recovery::repair_app,
             recovery::reset_all,
+            theme::sync_window_theme,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Edentic");
