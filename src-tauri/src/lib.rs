@@ -1,4 +1,6 @@
+mod asset_commands;
 mod commands;
+mod indexing;
 mod media;
 mod models;
 mod openrouter;
@@ -48,11 +50,12 @@ pub fn run() {
             commands::get_project_snapshot,
             commands::forget_project,
             commands::import_media,
+            asset_commands::delete_media_asset,
             commands::add_pasted_context,
             commands::import_context_file,
-            commands::start_index,
-            commands::get_index_jobs,
-            commands::cancel_index_job,
+            indexing::start_index,
+            indexing::get_index_jobs,
+            indexing::cancel_index_job,
             commands::save_openrouter_key,
             commands::delete_openrouter_key,
             commands::test_openrouter,
