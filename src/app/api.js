@@ -66,6 +66,17 @@ export async function importMedia(projectPath) {
   return invoke("import_media", { projectPath });
 }
 
+export async function deleteMediaAsset(projectPath, assetId) {
+  if (demoMode()) {
+    const snapshot = structuredClone(demoProject);
+    snapshot.assets = snapshot.assets.filter((asset) => asset.id !== assetId);
+    snapshot.scenes = snapshot.scenes.filter((scene) => scene.assetId !== assetId);
+    snapshot.transcript = snapshot.transcript.filter((segment) => segment.assetId !== assetId);
+    return snapshot;
+  }
+  return invoke("delete_media_asset", { projectPath, assetId });
+}
+
 export async function importContext(projectPath) {
   if (demoMode()) return structuredClone(demoProject.contexts[0]);
   return invoke("import_context_file", { projectPath });
