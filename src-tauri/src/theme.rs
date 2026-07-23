@@ -2,33 +2,51 @@ use tauri::{image::Image, Theme, WebviewWindow};
 
 fn icon_for_surface(dark_surface: bool) -> Image<'static> {
     let base = tauri::include_image!("../assets/icon/png/transparent/edentic-icon-128x128.png");
-    let mut rgba = base.rgba().to_vec();
+    let source = base.rgba();
+    let width = base.width() as usize;
+    let height = base.height() as usize;
+    let mut rgba = source.to_vec();
 
-    if dark_surface {
-        for pixel in rgba.chunks_exact_mut(4) {
-            if pixel[3] < 12 {
+    let outline = if dark_surface {
+        [255, 246, 224, 220]
+    } else {
+        [28, 29, 32, 178]
+    };
+    let radius: isize = if dark_surface { 2 } else { 1 };
+
+    for y in 0..height {
+        for x in 0..width {
+            let index = (y * width + x) * 4;
+            if source[index + 3] >= 18 {
                 continue;
             }
 
-            let red = u16::from(pixel[0]);
-            let green = u16::from(pixel[1]);
-            let blue = u16::from(pixel[2]);
-            let luminance = (red * 54 + green * 183 + blue * 19) / 256;
+            let mut touches_logo = false;
+            'neighbours: for dy in -radius..=radius {
+                for dx in -radius..=radius {
+                    if dx == 0 && dy == 0 {
+                        continue;
+                    }
 
-            if luminance < 170 {
-                if blue > red + 18 && blue > green + 10 {
-                    pixel[0] = 78;
-                    pixel[1] = 142;
-                    pixel[2] = 255;
-                } else if red > blue + 16 && green > blue + 8 {
-                    pixel[0] = 239;
-                    pixel[1] = 190;
-                    pixel[2] = 72;
-                } else {
-                    pixel[0] = 244;
-                    pixel[1] = 239;
-                    pixel[2] = 226;
+                    let nx = x as isize + dx;
+                    let ny = y as isize + dy;
+                    if nx < 0 || ny < 0 || nx >= width as isize || ny >= height as isize {
+                        continue;
+                    }
+
+                    let neighbour = (ny as usize * width + nx as usize) * 4;
+                    if source[neighbour + 3] >= 48 {
+                        touches_logo = true;
+                        break 'neighbours;
+                    }
                 }
+            }
+
+            if touches_logo {
+                rgba[index] = outline[0];
+                rgba[index + 1] = outline[1];
+                rgba[index + 2] = outline[2];
+                rgba[index + 3] = outline[3];
             }
         }
     }
