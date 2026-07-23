@@ -1,11 +1,22 @@
 import { getBootstrap } from "./app/api.js";
 import { renderApp, wireEvents } from "./app/render.js";
 import { applyTheme, defaultSettings, patchState, state, subscribe } from "./app/state.js";
+import {
+  applyWorkspaceTransientPatch,
+  captureWorkspacePlayback,
+  installWorkspaceRuntime,
+  restoreWorkspacePlayback,
+} from "./app/workspace-runtime.js";
 
-subscribe(() => {
+subscribe((nextState, patch) => {
+  if (nextState.screen === "workspace" && applyWorkspaceTransientPatch(nextState, patch)) return;
+  const playback = captureWorkspacePlayback();
   renderApp();
   wireEvents();
+  restoreWorkspacePlayback(playback);
 });
+
+installWorkspaceRuntime();
 
 async function boot() {
   applyTheme(defaultSettings.theme);
@@ -31,7 +42,13 @@ async function boot() {
 
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
-    patchState({ settingsOpen: false, createProjectOpen: false });
+    patchState({
+      settingsOpen: false,
+      createProjectOpen: false,
+      contextDialogOpen: false,
+      recoveryDialog: null,
+      assetDeleteId: null,
+    });
   }
   if ((event.ctrlKey || event.metaKey) && event.key === ",") {
     event.preventDefault();
