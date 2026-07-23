@@ -34,12 +34,15 @@ export const state = {
   recoveryDialog: null,
   createProjectOpen: false,
   contextDialogOpen: false,
+  assetDeleteId: null,
   toast: null,
   loading: false,
   projectView: "grid",
   projectQuery: "",
   videoMapTab: "scenes",
   videoMapQuery: "",
+  mediaPanelCollapsed: false,
+  videoMapPanelCollapsed: false,
   openrouterModels: [],
 };
 
@@ -52,7 +55,7 @@ export function subscribe(listener) {
 
 export function patchState(patch) {
   Object.assign(state, patch);
-  for (const listener of subscribers) listener(state);
+  for (const listener of subscribers) listener(state, patch);
 }
 
 export function resolveTheme(theme) {
