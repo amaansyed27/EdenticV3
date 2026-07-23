@@ -8,8 +8,10 @@ This checklist is for the first local test after cloning Edentic V3. It covers o
 - Rust stable with the MSVC toolchain
 - Microsoft C++ Build Tools and WebView2
 - Node.js 20 or newer
-- Current FFmpeg and ffprobe on `PATH`
+- FFmpeg and ffprobe on `PATH`
 - Python 3.12 for optional local transcription
+
+A current FFmpeg build is still recommended, but Slice 1 poster, scene and waveform generation also avoids options that fail on older 2013-era builds.
 
 Install transcription support:
 
@@ -52,15 +54,25 @@ npm run tauri:dev
 
 ## C. Media and Video Map
 
+Use the same portrait screen recording that previously failed, plus one landscape clip when available.
+
 - [ ] Import an MP4 or MOV and confirm it is copied under `Media\Originals`.
 - [ ] The source appears in Media with its real duration, resolution, size and codecs.
-- [ ] The video plays in the main viewer.
+- [ ] The video plays continuously for at least 15 seconds while Video Map indexing is active.
+- [ ] The video does not blink, restart or jump back when job progress changes.
+- [ ] The native player controls can play, pause, seek, change volume and enter fullscreen.
+- [ ] Collapse and reopen the Media panel using its header control or `Ctrl+B`.
+- [ ] Collapse and reopen Video Map using its header control or `Ctrl+Shift+B`.
 - [ ] Build Video Map shows visible progress and supports cancellation.
-- [ ] A poster, waveform and scene thumbnails are created.
-- [ ] Clicking a scene jumps the viewer to the correct time.
+- [ ] A poster, waveform and scene thumbnails are created for portrait and landscape media.
+- [ ] Clicking a scene jumps the viewer to the correct time without replacing or restarting the player.
 - [ ] When transcription is installed, transcript segments appear and are searchable.
-- [ ] Without transcription support, Edentic reports a partial index without discarding scenes or waveforms.
+- [ ] Without transcription support, Edentic reports a partial index without discarding scenes, poster or waveform.
+- [ ] FFmpeg failures appear as a compact useful message rather than the full build banner.
 - [ ] Close and reopen the project; the index remains available.
+- [ ] Use the trash control to remove a disposable source from the project.
+- [ ] Confirm its managed copy and derived cache are removed, while the external original file remains untouched.
+- [ ] Deletion is blocked while that source is actively indexing until cancellation completes.
 
 ## D. Context
 
