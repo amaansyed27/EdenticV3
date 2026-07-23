@@ -31,6 +31,17 @@ function projectCard(project) {
     </article>`;
 }
 
+function animatedAbstractLogo(size) {
+  const source = size === "large"
+    ? "/assets/icon/png/transparent/edentic-icon-512x512.png"
+    : "/assets/icon/png/transparent/edentic-icon-128x128.png";
+  return `
+    <span class="logo-motion-mark logo-motion-mark-${size}">
+      <img src="${source}" alt="" />
+      <span class="logo-motion-sheen" aria-hidden="true"></span>
+    </span>`;
+}
+
 export function renderHome(state) {
   const projects = state.projects.filter((project) =>
     project.name.toLowerCase().includes((state.projectQuery ?? "").toLowerCase()),
@@ -59,9 +70,14 @@ export function renderHome(state) {
           <h1>Continue creating.</h1>
           <p class="home-subtitle">Your projects, source media and edit data stay together.</p>
         </div>
-        <button class="button button-primary button-large" type="button" data-action="new-project">
-          ${icon("plus", 18)} New project
-        </button>
+        <div class="home-intro-actions">
+          <div class="home-logo-motion" aria-hidden="true">
+            ${animatedAbstractLogo("small")}
+          </div>
+          <button class="button button-primary button-large" type="button" data-action="new-project">
+            ${icon("plus", 18)} New project
+          </button>
+        </div>
       </section>
 
       <section class="projects-section" aria-labelledby="projects-title">
@@ -131,8 +147,10 @@ export function renderOnboarding(state) {
         </div>
       </section>
       <div class="onboarding-art" aria-hidden="true">
-        <div class="onboarding-glow"></div>
-        <div class="onboarding-horizon"></div>
+        <div class="onboarding-logo-stage">
+          <span class="onboarding-logo-rail"></span>
+          ${animatedAbstractLogo("large")}
+        </div>
       </div>
     </main>`;
 }

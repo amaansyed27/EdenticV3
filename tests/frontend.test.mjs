@@ -32,6 +32,7 @@ test("the working editor avoids gradient styling", async () => {
     "settings.css",
     "recovery.css",
     "branding.css",
+    "logo-motion.css",
   ].map((file) => readFile(new URL(`../src/styles/${file}`, import.meta.url), "utf8")));
   assert.doesNotMatch(styles.join("\n"), /linear-gradient|radial-gradient|repeating-linear-gradient/);
 });
@@ -71,4 +72,18 @@ test("official Edentic branding is wired for UI and packaged builds", async () =
   assert.match(branding, /edentic-icon-128x128\.png/);
   assert.match(buildScript, /brandingAssets/);
   assert.deepEqual(JSON.parse(tauriConfig).bundle.icon, ["../assets/icon/edentic-favicon.ico"]);
+});
+
+test("animated abstract logos are present on onboarding and home", async () => {
+  const [index, home, motion] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../src/app/views/home.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/styles/logo-motion.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(index, /logo-motion\.css/);
+  assert.match(home, /onboarding-logo-stage/);
+  assert.match(home, /home-logo-motion/);
+  assert.match(home, /logo-motion-sheen/);
+  assert.match(motion, /mask-image/);
+  assert.match(motion, /prefers-reduced-motion/);
 });
