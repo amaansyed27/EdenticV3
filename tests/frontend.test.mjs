@@ -32,6 +32,8 @@ test("the working editor avoids gradient styling", async () => {
     "settings.css",
     "recovery.css",
     "branding.css",
+    "logo-motion.css",
+    "theme-adaptive.css",
   ].map((file) => readFile(new URL(`../src/styles/${file}`, import.meta.url), "utf8")));
   assert.doesNotMatch(styles.join("\n"), /linear-gradient|radial-gradient|repeating-linear-gradient/);
 });
