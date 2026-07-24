@@ -1,8 +1,8 @@
 import { getBootstrap } from "./app/api.js";
 import { renderApp, wireEvents } from "./app/render.js";
 import { applyTheme, defaultSettings, patchState, state, subscribe } from "./app/state.js";
+import { applyWorkspaceTransientPatch } from "./app/views/workspace.js";
 import {
-  applyWorkspaceTransientPatch,
   captureWorkspacePlayback,
   installWorkspaceRuntime,
   restoreWorkspacePlayback,
