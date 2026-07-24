@@ -1,8 +1,74 @@
 import { deleteMediaAsset } from "./api.js";
 import { notify, patchState, state } from "./state.js";
 
+let activeScrubber = null;
+let activePointerId = null;
+
+function sourcePlayer() {
+  return document.querySelector("#source-player");
+}
+
+function sourceScrubber() {
+  return document.querySelector("[data-source-scrubber]");
+}
+
+function sourceDuration(player, scrubber = sourceScrubber()) {
+  if (Number.isFinite(player?.duration) && player.duration > 0) return player.duration;
+  return Number(scrubber?.dataset.duration) || 0;
+}
+
+function timeLabel(seconds) {
+  const total = Math.max(0, Math.floor(seconds || 0));
+  const minutes = Math.floor(total / 60);
+  const remainder = total % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
+}
+
+function updateScrubber(player = sourcePlayer()) {
+  const scrubber = sourceScrubber();
+  if (!player || !scrubber) return;
+  const duration = sourceDuration(player, scrubber);
+  const currentTime = Math.min(Math.max(player.currentTime || 0, 0), duration || 0);
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const playhead = scrubber.querySelector("#waveform-playhead");
+  const progressFill = scrubber.querySelector("#waveform-progress");
+  if (playhead) playhead.style.left = `${progress}%`;
+  if (progressFill) progressFill.style.width = `${progress}%`;
+  scrubber.setAttribute("aria-valuemax", String(duration));
+  scrubber.setAttribute("aria-valuenow", String(currentTime));
+  scrubber.setAttribute("aria-valuetext", timeLabel(currentTime));
+}
+
+function seekToRatio(scrubber, clientX) {
+  const player = sourcePlayer();
+  if (!player) return;
+  const bounds = scrubber.getBoundingClientRect();
+  if (bounds.width <= 0) return;
+  const ratio = Math.min(1, Math.max(0, (clientX - bounds.left) / bounds.width));
+  const duration = sourceDuration(player, scrubber);
+  if (duration <= 0) return;
+  player.currentTime = ratio * duration;
+  updateScrubber(player);
+}
+
+function adjustSourceTime(delta, absolute = false) {
+  const player = sourcePlayer();
+  if (!player) return;
+  const duration = sourceDuration(player);
+  if (duration <= 0) return;
+  player.currentTime = Math.min(duration, Math.max(0, absolute ? delta : player.currentTime + delta));
+  updateScrubber(player);
+}
+
+function toggleSourcePlayback() {
+  const player = sourcePlayer();
+  if (!player) return;
+  if (player.paused) player.play().catch(() => {});
+  else player.pause();
+}
+
 export function captureWorkspacePlayback() {
-  const player = document.querySelector("#source-player");
+  const player = sourcePlayer();
   if (!player) return null;
   return {
     assetId: player.dataset.assetId,
@@ -16,7 +82,7 @@ export function captureWorkspacePlayback() {
 
 export function restoreWorkspacePlayback(snapshot) {
   if (!snapshot) return;
-  const player = document.querySelector("#source-player");
+  const player = sourcePlayer();
   if (!player || player.dataset.assetId !== snapshot.assetId) return;
 
   const restore = () => {
@@ -31,6 +97,7 @@ export function restoreWorkspacePlayback(snapshot) {
 
   if (player.readyState >= 1) restore();
   else player.addEventListener("loadedmetadata", restore, { once: true });
+  updateScrubber(player);
 }
 
 async function handleWorkspaceAction(action, element) {
@@ -71,6 +138,46 @@ function editableTarget(target) {
 }
 
 export function installWorkspaceRuntime() {
+  document.addEventListener("pointerdown", (event) => {
+    const scrubber = event.target instanceof Element
+      ? event.target.closest("[data-source-scrubber]")
+      : null;
+    if (!scrubber || event.button !== 0) return;
+    event.preventDefault();
+    activeScrubber = scrubber;
+    activePointerId = event.pointerId;
+    scrubber.classList.add("scrubbing");
+    scrubber.setPointerCapture?.(event.pointerId);
+    seekToRatio(scrubber, event.clientX);
+  }, true);
+
+  document.addEventListener("pointermove", (event) => {
+    if (!activeScrubber || event.pointerId !== activePointerId) return;
+    event.preventDefault();
+    seekToRatio(activeScrubber, event.clientX);
+  }, true);
+
+  const finishScrubbing = (event) => {
+    if (!activeScrubber || event.pointerId !== activePointerId) return;
+    seekToRatio(activeScrubber, event.clientX);
+    activeScrubber.classList.remove("scrubbing");
+    if (activeScrubber.hasPointerCapture?.(event.pointerId)) {
+      activeScrubber.releasePointerCapture(event.pointerId);
+    }
+    activeScrubber = null;
+    activePointerId = null;
+  };
+  document.addEventListener("pointerup", finishScrubbing, true);
+  document.addEventListener("pointercancel", finishScrubbing, true);
+
+  for (const eventName of ["timeupdate", "loadedmetadata", "durationchange"]) {
+    document.addEventListener(eventName, (event) => {
+      if (event.target instanceof HTMLVideoElement && event.target.id === "source-player") {
+        updateScrubber(event.target);
+      }
+    }, true);
+  }
+
   document.addEventListener("click", async (event) => {
     const element = event.target instanceof Element ? event.target.closest("[data-action]") : null;
     if (!element) return;
@@ -98,6 +205,27 @@ export function installWorkspaceRuntime() {
       event.preventDefault();
       if (event.shiftKey) patchState({ videoMapPanelCollapsed: !state.videoMapPanelCollapsed });
       else patchState({ mediaPanelCollapsed: !state.mediaPanelCollapsed });
+      return;
+    }
+
+    const target = event.target instanceof Element ? event.target : null;
+    const scrubber = target?.closest("[data-source-scrubber]");
+    if (scrubber && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+      event.preventDefault();
+      if (event.key === "Home") adjustSourceTime(0, true);
+      else if (event.key === "End") adjustSourceTime(sourceDuration(sourcePlayer()), true);
+      else adjustSourceTime(event.key === "ArrowLeft" ? -5 : 5);
+      return;
+    }
+
+    const interactive = target?.closest("button, a, [role='slider']");
+    if (!interactive && event.code === "Space" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      event.preventDefault();
+      toggleSourcePlayback();
+    }
+    if (!interactive && ["ArrowLeft", "ArrowRight"].includes(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      event.preventDefault();
+      adjustSourceTime(event.key === "ArrowLeft" ? -5 : 5);
     }
   });
 }
