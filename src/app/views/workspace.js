@@ -233,7 +233,7 @@ export function renderWorkspace(state) {
         <button type="button" role="tab" data-action="map-tab" data-value="context" class="${state.videoMapTab === "context" ? "active" : ""}">Context <span>${state.contexts.length}</span></button>
       </div>
       ${state.videoMapTab === "transcript"
-        ? `<label class="search-field map-search">${icon("search", 15)}<input id="video-map-search" type="search" placeholder="Search transcript" value="${escapeHtml(state.videoMapQuery)}" /></label>`
+        ? `<label class="search-field map-search">${icon("search", 15)}<input id="video-map-search" type="search" placeholder="Search transcript" value="${escapeHtml(state.videoMapQuery)}" /></label><p class="map-search-status" id="video-map-search-status" aria-live="polite"></p>`
         : ""}
       <div class="map-content">
         ${state.videoMapTab === "scenes"
