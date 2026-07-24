@@ -130,3 +130,41 @@
     transition: none;
   }
 }
+
+.waveform-track[data-source-scrubber] {
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.waveform-track[data-source-scrubber]:hover,
+.waveform-track[data-source-scrubber]:focus-visible,
+.waveform-track[data-source-scrubber].scrubbing {
+  border-color: var(--gold-line);
+}
+
+.waveform-progress {
+  background: var(--gold-soft);
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  width: 0;
+}
+
+.waveform-playhead {
+  pointer-events: none;
+}
+
+.waveform-playhead::after {
+  background: var(--gold);
+  border: 2px solid var(--bg-raised);
+  border-radius: 50%;
+  content: "";
+  height: 9px;
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 9px;
+}
