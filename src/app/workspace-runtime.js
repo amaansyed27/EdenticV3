@@ -192,11 +192,29 @@ export function installWorkspaceRuntime() {
   }, true);
 
   document.addEventListener("input", (event) => {
-    if (!(event.target instanceof HTMLInputElement) || event.target.id !== "media-search") return;
+    if (!(event.target instanceof HTMLInputElement)) return;
     const query = event.target.value.trim().toLowerCase();
-    document.querySelectorAll(".asset-item").forEach((item) => {
-      item.hidden = !item.textContent.toLowerCase().includes(query);
-    });
+    if (event.target.id === "media-search") {
+      document.querySelectorAll(".asset-item").forEach((item) => {
+        item.hidden = !item.textContent.toLowerCase().includes(query);
+      });
+    }
+    if (event.target.id === "video-map-search") {
+      state.videoMapQuery = event.target.value;
+      let matches = 0;
+      const rows = document.querySelectorAll(".transcript-row");
+      rows.forEach((row) => {
+        const matched = row.textContent.toLowerCase().includes(query);
+        row.hidden = !matched;
+        if (matched) matches += 1;
+      });
+      const status = document.querySelector("#video-map-search-status");
+      if (status) {
+        status.textContent = query
+          ? `${matches} ${matches === 1 ? "match" : "matches"}`
+          : "";
+      }
+    }
   });
 
   window.addEventListener("keydown", (event) => {
