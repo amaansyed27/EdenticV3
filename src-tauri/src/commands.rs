@@ -1,7 +1,7 @@
 use crate::{
     media,
     models::{
-        AppSettings, BootstrapPayload, CreateProjectInput, IndexJob, MediaAsset, OpenRouterModel,
+        AppSettings, BootstrapPayload, CreateProjectInput, MediaAsset, OpenRouterModel,
         OpenRouterStatus, ProjectContext, ProjectManifest, ProjectSnapshot, ProjectSummary,
     },
     openrouter, storage, RuntimeState,
@@ -10,7 +10,6 @@ use chrono::Utc;
 use std::{
     fs,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
 };
 use tauri::State;
 use uuid::Uuid;
@@ -285,138 +284,6 @@ pub fn import_context_file(project_path: String) -> Result<Option<ProjectContext
     storage::insert_context(Path::new(&project_path), &context)?;
     storage::touch_project(Path::new(&project_path))?;
     Ok(Some(context))
-}
-
-fn update_job(
-    jobs: &Arc<Mutex<std::collections::HashMap<String, IndexJob>>>,
-    job_id: &str,
-    updater: impl FnOnce(&mut IndexJob),
-) -> bool {
-    let Ok(mut jobs) = jobs.lock() else { return false };
-    let Some(job) = jobs.get_mut(job_id) else { return false };
-    updater(job);
-    job.status != "cancelled"
-}
-
-#[tauri::command]
-pub fn start_index(
-    project_path: String,
-    asset_id: String,
-    state: State<'_, RuntimeState>,
-) -> Result<IndexJob, String> {
-    let path = PathBuf::from(&project_path);
-    let asset = storage::find_asset(&path, &asset_id)?;
-    let settings = state
-        .data
-        .lock()
-        .map_err(|_| "Settings lock was poisoned".to_string())?
-        .settings
-        .clone();
-    let job = IndexJob {
-        id: Uuid::new_v4().to_string(),
-        project_path: project_path.clone(),
-        asset_id: asset_id.clone(),
-        status: "queued".into(),
-        progress: 0.0,
-        stage: "Waiting to index".into(),
-        error: String::new(),
-        started_at: Utc::now().to_rfc3339(),
-        finished_at: None,
-    };
-    state
-        .jobs
-        .lock()
-        .map_err(|_| "Job lock was poisoned".to_string())?
-        .insert(job.id.clone(), job.clone());
-    let jobs = Arc::clone(&state.jobs);
-    let job_id = job.id.clone();
-    std::thread::spawn(move || {
-        loop {
-            let claimed = {
-                let Ok(mut all_jobs) = jobs.lock() else { return };
-                let cancelled = all_jobs
-                    .get(&job_id)
-                    .is_none_or(|job| job.status == "cancelled");
-                if cancelled {
-                    return;
-                }
-                let active = all_jobs.values().filter(|job| job.status == "running").count();
-                if active < usize::from(settings.max_concurrent_jobs) {
-                    if let Some(job) = all_jobs.get_mut(&job_id) {
-                        job.status = "running".into();
-                        job.stage = "Preparing source".into();
-                    }
-                    true
-                } else {
-                    false
-                }
-            };
-            if claimed {
-                break;
-            }
-            std::thread::sleep(std::time::Duration::from_millis(180));
-        }
-        let result = media::build_index(&path, asset, &settings, |progress, stage| {
-            update_job(&jobs, &job_id, |job| {
-                job.progress = progress;
-                job.stage = stage.into();
-            })
-        });
-        match result {
-            Ok(result) => {
-                update_job(&jobs, &job_id, |job| {
-                    job.status = "completed".into();
-                    job.progress = 1.0;
-                    job.stage = if result.warning.is_some() {
-                        "Video Map ready · transcript unavailable".into()
-                    } else {
-                        "Video Map ready".into()
-                    };
-                    job.error = result.warning.unwrap_or_default();
-                    job.finished_at = Some(Utc::now().to_rfc3339());
-                });
-            }
-            Err(error) => {
-                update_job(&jobs, &job_id, |job| {
-                    if job.status != "cancelled" {
-                        job.status = "failed".into();
-                    }
-                    job.stage = "Indexing stopped".into();
-                    job.error = error;
-                    job.finished_at = Some(Utc::now().to_rfc3339());
-                });
-            }
-        }
-    });
-    Ok(job)
-}
-
-#[tauri::command]
-pub fn get_index_jobs(
-    project_path: String,
-    state: State<'_, RuntimeState>,
-) -> Result<Vec<IndexJob>, String> {
-    let mut jobs = state
-        .jobs
-        .lock()
-        .map_err(|_| "Job lock was poisoned".to_string())?
-        .values()
-        .filter(|job| job.project_path == project_path)
-        .cloned()
-        .collect::<Vec<_>>();
-    jobs.sort_by(|left, right| left.started_at.cmp(&right.started_at));
-    Ok(jobs)
-}
-
-#[tauri::command]
-pub fn cancel_index_job(job_id: String, state: State<'_, RuntimeState>) -> Result<bool, String> {
-    let mut jobs = state.jobs.lock().map_err(|_| "Job lock was poisoned".to_string())?;
-    let job = jobs.get_mut(&job_id).ok_or_else(|| "Index job not found".to_string())?;
-    if ["queued", "running"].contains(&job.status.as_str()) {
-        job.status = "cancelled".into();
-        job.stage = "Cancelling".into();
-    }
-    Ok(true)
 }
 
 #[tauri::command]
