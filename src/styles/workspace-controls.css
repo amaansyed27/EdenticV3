@@ -168,3 +168,21 @@
   transform: translate(-50%, -50%);
   width: 9px;
 }
+
+.transcript-row[hidden],
+.asset-item[hidden],
+.project-item[hidden] {
+  display: none;
+}
+
+.map-search-status {
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  min-height: 13px;
+  padding: 5px 14px 0;
+}
+
+.map-search-status:empty {
+  display: none;
+}
