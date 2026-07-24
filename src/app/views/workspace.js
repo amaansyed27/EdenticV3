@@ -303,8 +303,22 @@ export function renderWorkspace(state) {
                 ${selectedAsset ? `<button class="icon-button source-delete-button" type="button" data-action="request-delete-asset" data-asset-id="${selectedAsset.id}" aria-label="Remove source">${icon("trash", 17)}</button>` : ""}
               </div>
             </div>
-            <div class="waveform-track">
+            <div
+              class="waveform-track"
+              id="source-scrubber"
+              data-source-scrubber
+              data-duration="${selectedAsset?.duration ?? 0}"
+              role="slider"
+              tabindex="${selectedAsset ? "0" : "-1"}"
+              aria-label="Source position"
+              aria-valuemin="0"
+              aria-valuemax="${selectedAsset?.duration ?? 0}"
+              aria-valuenow="0"
+              aria-valuetext="00:00"
+              title="Click or drag to seek"
+            >
               ${waveformUrl ? `<img src="${escapeHtml(waveformUrl)}" alt="Audio waveform" />` : `<div class="waveform-placeholder">${Array.from({ length: 72 }, (_, index) => `<i style="--h:${18 + ((index * 17) % 68)}%"></i>`).join("")}</div>`}
+              <div class="waveform-progress" id="waveform-progress"></div>
               <div class="waveform-playhead" id="waveform-playhead"></div>
             </div>
             <div class="source-facts">
