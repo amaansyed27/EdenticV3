@@ -23,10 +23,37 @@ pub fn load_global_data() -> GlobalData {
     let Ok(path) = app_config_path() else {
         return GlobalData::default();
     };
-    let Ok(content) = fs::read_to_string(path) else {
+    let backup = path.with_extension("json.bak");
+    let content = fs::read_to_string(&path).or_else(|_| fs::read_to_string(&backup));
+    let Ok(content) = content else {
         return GlobalData::default();
     };
     serde_json::from_str(&content).unwrap_or_default()
+}
+
+fn replace_file(source: &Path, destination: &Path) -> NativeResult<()> {
+    let backup = destination.with_extension("json.bak");
+    if backup.exists() {
+        fs::remove_file(&backup).map_err(|error| error.to_string())?;
+    }
+    if destination.exists() {
+        fs::rename(destination, &backup)
+            .map_err(|error| format!("Could not prepare settings update: {error}"))?;
+    }
+    match fs::rename(source, destination) {
+        Ok(()) => {
+            if backup.exists() {
+                fs::remove_file(backup).map_err(|error| error.to_string())?;
+            }
+            Ok(())
+        }
+        Err(error) => {
+            if backup.exists() {
+                let _ = fs::rename(&backup, destination);
+            }
+            Err(format!("Could not save settings: {error}"))
+        }
+    }
 }
 
 pub fn save_global_data(data: &GlobalData) -> NativeResult<()> {
@@ -34,7 +61,11 @@ pub fn save_global_data(data: &GlobalData) -> NativeResult<()> {
     let temporary = path.with_extension("json.tmp");
     let content = serde_json::to_string_pretty(data).map_err(|error| error.to_string())?;
     fs::write(&temporary, content).map_err(|error| error.to_string())?;
-    fs::rename(temporary, path).map_err(|error| error.to_string())
+    replace_file(&temporary, &path)?;
+    let persisted = fs::read_to_string(&path).map_err(|error| error.to_string())?;
+    serde_json::from_str::<GlobalData>(&persisted)
+        .map(|_| ())
+        .map_err(|error| format!("Saved settings could not be verified: {error}"))
 }
 
 pub fn sanitize_project_name(name: &str) -> String {
@@ -350,4 +381,19 @@ mod tests {
         assert_eq!(sanitize_project_name("  Race: Edit?  "), "Race Edit");
         assert_eq!(sanitize_project_name("Project."), "Project");
     }
+    #[test]
+    fn replaces_an_existing_settings_file() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("settings.json");
+        let temporary = directory.path().join("settings.json.tmp");
+        fs::write(&path, "old").unwrap();
+        fs::write(&temporary, "new").unwrap();
+
+        replace_file(&temporary, &path).unwrap();
+
+        assert_eq!(fs::read_to_string(&path).unwrap(), "new");
+        assert!(!temporary.exists());
+        assert!(!path.with_extension("json.bak").exists());
+    }
+
 }
