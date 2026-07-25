@@ -2,17 +2,33 @@ import { toAssetUrl } from "../api.js";
 import { escapeHtml, fileName, formatBytes, formatDuration } from "../format.js";
 import { icon } from "../icons.js";
 
+const imageExtensions = new Set(["png", "jpg", "jpeg", "webp", "gif", "bmp", "tif", "tiff", "avif"]);
+const audioExtensions = new Set(["wav", "mp3", "m4a", "aac", "flac", "ogg", "opus", "wma", "aiff", "aif"]);
+
+function assetKind(asset) {
+  const extension = asset.name.split(".").pop()?.toLowerCase() ?? "";
+  if (imageExtensions.has(extension)) return "image";
+  if (audioExtensions.has(extension) || asset.videoCodec === "none") return "audio";
+  return "video";
+}
+
+function assetDetails(asset, kind) {
+  if (kind === "audio") return `Audio · ${formatBytes(asset.sizeBytes)}`;
+  return `${asset.width}×${asset.height} · ${formatBytes(asset.sizeBytes)}`;
+}
+
 function assetItem(asset, selected) {
-  const poster = toAssetUrl(asset.posterPath);
+  const kind = assetKind(asset);
+  const preview = toAssetUrl(kind === "image" ? asset.managedPath : asset.posterPath);
   return `
     <button class="asset-item ${selected ? "selected" : ""}" type="button" data-action="select-asset" data-asset-id="${asset.id}">
-      <span class="asset-thumb">
-        ${poster ? `<img src="${poster}" alt="" />` : icon("media", 22)}
-        <small>${formatDuration(asset.duration)}</small>
+      <span class="asset-thumb ${kind}">
+        ${preview ? `<img src="${preview}" alt="" />` : icon(kind === "audio" ? "waveform" : "media", 22)}
+        ${kind !== "image" ? `<small>${formatDuration(asset.duration)}</small>` : ""}
       </span>
       <span class="asset-copy">
         <strong title="${escapeHtml(asset.name)}">${escapeHtml(asset.name)}</strong>
-        <small>${asset.width}×${asset.height} · ${formatBytes(asset.sizeBytes)}</small>
+        <small>${assetDetails(asset, kind)}</small>
       </span>
       <span class="status-dot ${asset.indexStatus}" title="${escapeHtml(asset.indexStatus)}"></span>
     </button>`;
@@ -179,6 +195,8 @@ export function renderWorkspace(state) {
   const activeIndexJob = selectedAsset
     ? state.jobs.find((job) => job.assetId === selectedAsset.id && ["queued", "running"].includes(job.status))
     : null;
+  const selectedKind = selectedAsset ? assetKind(selectedAsset) : null;
+  const isTemporal = selectedKind === "video" || selectedKind === "audio";
   const mediaUrl = selectedAsset ? toAssetUrl(selectedAsset.proxyPath || selectedAsset.managedPath) : "";
   const waveformUrl = selectedAsset ? toAssetUrl(selectedAsset.waveformPath) : "";
   const gridClasses = [
@@ -273,18 +291,22 @@ export function renderWorkspace(state) {
         <section class="viewer-panel">
           <div class="viewer-stage">
             ${selectedAsset
-              ? `<video id="source-player" data-asset-id="${selectedAsset.id}" src="${escapeHtml(mediaUrl)}" ${selectedAsset.posterPath ? `poster="${escapeHtml(toAssetUrl(selectedAsset.posterPath))}"` : ""} preload="metadata" controls controlslist="nodownload" playsinline></video>`
+              ? selectedKind === "image"
+                ? `<img class="source-image" src="${escapeHtml(mediaUrl)}" alt="${escapeHtml(selectedAsset.name)}" />`
+                : selectedKind === "audio"
+                  ? `<div class="audio-source-view">${icon("waveform", 42)}<strong>${escapeHtml(fileName(selectedAsset.name))}</strong><audio id="source-player" data-asset-id="${selectedAsset.id}" src="${escapeHtml(mediaUrl)}" preload="metadata" controls controlslist="nodownload"></audio></div>`
+                  : `<video id="source-player" data-asset-id="${selectedAsset.id}" src="${escapeHtml(mediaUrl)}" ${selectedAsset.posterPath ? `poster="${escapeHtml(toAssetUrl(selectedAsset.posterPath))}"` : ""} preload="metadata" controls controlslist="nodownload" playsinline></video>`
               : `
                 <div class="viewer-empty">
                   <div class="viewer-empty-mark">${icon("play", 34)}</div>
-                  <h2>Your footage appears here.</h2>
-                  <p>Import a screen recording, tutorial, match clip or any other source video.</p>
+                  <h2>Your media appears here.</h2>
+                  <p>Import video, audio or still-image sources. Originals are copied into this project.</p>
                 </div>`}
           </div>
           <div class="transport">
-            <div class="transport-time"><span id="current-time">00:00</span><i>/</i><span>${formatDuration(selectedAsset?.duration)}</span></div>
-            <button class="transport-play" type="button" data-action="toggle-play" ${selectedAsset ? "" : "disabled"}>${icon("play", 19)}</button>
-            <div class="transport-meta">${selectedAsset ? `${selectedAsset.width}×${selectedAsset.height}` : "No source selected"}</div>
+            <div class="transport-time"><span id="current-time">${selectedKind === "image" ? "STILL" : "00:00"}</span>${isTemporal ? `<i>/</i><span>${formatDuration(selectedAsset?.duration)}</span>` : ""}</div>
+            <button class="transport-play" type="button" data-action="toggle-play" ${isTemporal ? "" : "disabled"}>${icon("play", 19)}</button>
+            <div class="transport-meta">${selectedAsset ? (selectedKind === "audio" ? "Audio source" : `${selectedAsset.width}×${selectedAsset.height}`) : "No source selected"}</div>
           </div>
           <div class="source-overview">
             <div class="source-overview-header">
@@ -303,13 +325,13 @@ export function renderWorkspace(state) {
                 ${selectedAsset ? `<button class="icon-button source-delete-button" type="button" data-action="request-delete-asset" data-asset-id="${selectedAsset.id}" aria-label="Remove source">${icon("trash", 17)}</button>` : ""}
               </div>
             </div>
-            <div
+            ${isTemporal ? `<div
               class="waveform-track"
               id="source-scrubber"
               data-source-scrubber
               data-duration="${selectedAsset?.duration ?? 0}"
               role="slider"
-              tabindex="${selectedAsset ? "0" : "-1"}"
+              tabindex="0"
               aria-label="Source position"
               aria-valuemin="0"
               aria-valuemax="${selectedAsset?.duration ?? 0}"
@@ -317,14 +339,14 @@ export function renderWorkspace(state) {
               aria-valuetext="00:00"
               title="Click or drag to seek"
             >
-              ${waveformUrl ? `<img src="${escapeHtml(waveformUrl)}" alt="Audio waveform" />` : `<div class="waveform-placeholder">${Array.from({ length: 72 }, (_, index) => `<i style="--h:${18 + ((index * 17) % 68)}%"></i>`).join("")}</div>`}
+              ${waveformUrl ? `<img src="${escapeHtml(waveformUrl)}" alt="Audio waveform" />` : `<div class="waveform-unavailable">Waveform builds with the local media map</div>`}
               <div class="waveform-progress" id="waveform-progress"></div>
               <div class="waveform-playhead" id="waveform-playhead"></div>
-            </div>
+            </div>` : `<div class="still-source-note">${icon("media", 15)} Still image · no playback timeline</div>`}
             <div class="source-facts">
-              <span><small>Duration</small>${formatDuration(selectedAsset?.duration)}</span>
-              <span><small>Codec</small>${selectedAsset?.videoCodec || "—"}</span>
-              <span><small>Audio</small>${selectedAsset?.audioCodec || "—"}</span>
+              <span><small>Type</small>${selectedKind || "—"}</span>
+              <span><small>Duration</small>${selectedKind === "image" ? "Still" : formatDuration(selectedAsset?.duration)}</span>
+              <span><small>Codec</small>${selectedKind === "audio" ? selectedAsset?.audioCodec : selectedAsset?.videoCodec || "—"}</span>
               <span><small>Index</small><b class="index-state ${selectedAsset?.indexStatus || "none"}">${selectedAsset?.indexStatus || "Waiting"}</b></span>
             </div>
           </div>
