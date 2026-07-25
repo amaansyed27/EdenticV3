@@ -103,7 +103,7 @@ function providersSettings(state) {
             <button class="button button-primary" type="button" data-action="save-openrouter-key">Save key</button>
           </div>
         </label>
-        <p class="privacy-note">${icon("info", 15)} Source video never leaves the device during local indexing. Future AI requests will show exactly what derived context is being sent.</p>
+        <p class="privacy-note">${icon("info", 15)} Source media never leaves the device during local processing. Future AI requests will show exactly what derived context is being sent.</p>
       </div>
       <div class="settings-group">
         <label class="field">
@@ -141,7 +141,7 @@ const recoveryActions = [
   {
     id: "cache",
     title: "Reset cache",
-    description: "Remove generated proxies, posters, waveforms, scene thumbnails and transcript indexes from known projects. Video Maps will need to be rebuilt.",
+    description: "Remove generated proxies, posters, waveforms, scene thumbnails and transcript indexes from known projects. Local source data will need to be rebuilt.",
     button: "Reset cache",
   },
   {
