@@ -382,6 +382,25 @@ mod tests {
         assert_eq!(sanitize_project_name("Project."), "Project");
     }
     #[test]
+    fn context_survives_a_fresh_database_connection() {
+        let directory = tempfile::tempdir().unwrap();
+        initialize_project_folders(directory.path()).unwrap();
+        let context = ProjectContext {
+            id: "context-1".into(),
+            name: "WinReclaim demo".into(),
+            source: "pasted".into(),
+            content: "Persistent project context".into(),
+            created_at: Utc::now().to_rfc3339(),
+        };
+
+        insert_context(directory.path(), &context).unwrap();
+        let restored = list_contexts(directory.path()).unwrap();
+
+        assert_eq!(restored.len(), 1);
+        assert_eq!(restored[0].content, context.content);
+    }
+
+    #[test]
     fn replaces_an_existing_settings_file() {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("settings.json");
