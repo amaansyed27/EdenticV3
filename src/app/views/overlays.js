@@ -244,10 +244,10 @@ export function renderContextDialog(state) {
     <div class="modal-layer" data-action="close-context-dialog">
       <form class="dialog context-dialog" id="context-form" data-stop-propagation>
         <div class="dialog-header">
-          <div><p class="eyebrow">PROJECT CONTEXT</p><h2>Explain the footage</h2></div>
+          <div><p class="eyebrow">PROJECT CONTEXT</p><h2>Add project context</h2></div>
           <button class="icon-button" type="button" data-action="close-context-dialog" aria-label="Close">${icon("close", 19)}</button>
         </div>
-        <p class="dialog-copy">Paste the coding-agent prompt, recipe, event information or creative brief. This remains inside the project.</p>
+        <p class="dialog-copy">Create a new saved context item. Existing items remain visible in the workspace Context tab.</p>
         <label class="field"><span>Name</span><input name="name" required placeholder="Implementation context" /></label>
         <label class="field"><span>Context</span><textarea name="content" required rows="10" placeholder="Describe what the recording shows and what matters…"></textarea></label>
         <div class="dialog-footer split">
