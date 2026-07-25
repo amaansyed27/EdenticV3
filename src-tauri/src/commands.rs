@@ -279,9 +279,13 @@ pub fn add_pasted_context(
         content: content.trim().to_string(),
         created_at: Utc::now().to_rfc3339(),
     };
-    storage::insert_context(Path::new(&project_path), &context)?;
-    storage::touch_project(Path::new(&project_path))?;
-    Ok(context)
+    let project_path = Path::new(&project_path);
+    storage::insert_context(project_path, &context)?;
+    storage::touch_project(project_path)?;
+    storage::list_contexts(project_path)?
+        .into_iter()
+        .find(|saved| saved.id == context.id)
+        .ok_or_else(|| "Context could not be verified after saving".to_string())
 }
 
 #[tauri::command]
@@ -301,9 +305,14 @@ pub fn import_context_file(project_path: String) -> Result<Option<ProjectContext
         content,
         created_at: Utc::now().to_rfc3339(),
     };
-    storage::insert_context(Path::new(&project_path), &context)?;
-    storage::touch_project(Path::new(&project_path))?;
-    Ok(Some(context))
+    let project_path = Path::new(&project_path);
+    storage::insert_context(project_path, &context)?;
+    storage::touch_project(project_path)?;
+    let saved = storage::list_contexts(project_path)?
+        .into_iter()
+        .find(|saved| saved.id == context.id)
+        .ok_or_else(|| "Context could not be verified after saving".to_string())?;
+    Ok(Some(saved))
 }
 
 #[tauri::command]
