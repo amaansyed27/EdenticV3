@@ -6,14 +6,20 @@ import {
   captureWorkspacePlayback,
   installWorkspaceRuntime,
   restoreWorkspacePlayback,
+  stopWorkspacePlayback,
 } from "./app/workspace-runtime.js";
 
 subscribe((nextState, patch) => {
   if (nextState.screen === "workspace" && applyWorkspaceTransientPatch(nextState, patch)) return;
   const playback = captureWorkspacePlayback();
+  const selectedAssetChanged = Object.hasOwn(patch ?? {}, "selectedAssetId")
+    && playback
+    && patch.selectedAssetId !== playback.assetId;
+  const leavingWorkspace = nextState.screen !== "workspace";
+  if (selectedAssetChanged || leavingWorkspace) stopWorkspacePlayback();
   renderApp();
   wireEvents();
-  restoreWorkspacePlayback(playback);
+  if (!selectedAssetChanged && !leavingWorkspace) restoreWorkspacePlayback(playback);
 });
 
 installWorkspaceRuntime();
