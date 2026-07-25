@@ -21,9 +21,10 @@ test("Slice 1 imports and renders video, audio and image sources", async () => {
 });
 
 test("Slice 1 verifies settings and context persistence", async () => {
-  const [storage, render] = await Promise.all([
+  const [storage, render, workspace] = await Promise.all([
     readFile(new URL("../src-tauri/src/storage.rs", import.meta.url), "utf8"),
     readFile(new URL("../src/app/render.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/app/views/workspace.js", import.meta.url), "utf8"),
   ]);
 
   assert.match(storage, /fn replace_file/);
@@ -32,4 +33,9 @@ test("Slice 1 verifies settings and context persistence", async () => {
   assert.match(render, /settings: readSettingsForm\(\)/);
   assert.match(render, /await refreshProject\(\);/);
   assert.match(render, /Settings saved and verified/);
+  assert.match(render, /action === "view-context"/);
+  assert.match(render, /videoMapTab: "context"/);
+  assert.match(workspace, /data-action="view-context"/);
+  assert.match(workspace, /class="context-body"/);
+  assert.match(workspace, /context\.content/);
 });
