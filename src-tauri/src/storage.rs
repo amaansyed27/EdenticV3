@@ -119,7 +119,8 @@ pub fn load_manifest(project_path: &Path) -> NativeResult<ProjectManifest> {
 }
 
 pub fn open_database(project_path: &Path) -> NativeResult<Connection> {
-    let connection = Connection::open(database_path(project_path)).map_err(|error| error.to_string())?;
+    let connection =
+        Connection::open(database_path(project_path)).map_err(|error| error.to_string())?;
     connection
         .execute_batch(
             "
@@ -237,7 +238,8 @@ pub fn list_assets(project_path: &Path) -> NativeResult<Vec<MediaAsset>> {
             })
         })
         .map_err(|error| error.to_string())?;
-    rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
 }
 
 pub fn find_asset(project_path: &Path, asset_id: &str) -> NativeResult<MediaAsset> {
@@ -255,12 +257,20 @@ pub fn replace_index(
     status: &str,
 ) -> NativeResult<()> {
     let mut connection = open_database(project_path)?;
-    let transaction = connection.transaction().map_err(|error| error.to_string())?;
-    transaction
-        .execute("DELETE FROM scenes WHERE asset_id = ?1", [asset.id.as_str()])
+    let transaction = connection
+        .transaction()
         .map_err(|error| error.to_string())?;
     transaction
-        .execute("DELETE FROM transcript WHERE asset_id = ?1", [asset.id.as_str()])
+        .execute(
+            "DELETE FROM scenes WHERE asset_id = ?1",
+            [asset.id.as_str()],
+        )
+        .map_err(|error| error.to_string())?;
+    transaction
+        .execute(
+            "DELETE FROM transcript WHERE asset_id = ?1",
+            [asset.id.as_str()],
+        )
         .map_err(|error| error.to_string())?;
     for scene in scenes {
         transaction
@@ -274,7 +284,13 @@ pub fn replace_index(
         transaction
             .execute(
                 "INSERT INTO transcript (id, asset_id, start, end, text) VALUES (?1,?2,?3,?4,?5)",
-                params![segment.id, segment.asset_id, segment.start, segment.end, segment.text],
+                params![
+                    segment.id,
+                    segment.asset_id,
+                    segment.start,
+                    segment.end,
+                    segment.text
+                ],
             )
             .map_err(|error| error.to_string())?;
     }
@@ -304,7 +320,8 @@ pub fn list_scenes(project_path: &Path) -> NativeResult<Vec<Scene>> {
             })
         })
         .map_err(|error| error.to_string())?;
-    rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
 }
 
 pub fn list_transcript(project_path: &Path) -> NativeResult<Vec<TranscriptSegment>> {
@@ -323,7 +340,8 @@ pub fn list_transcript(project_path: &Path) -> NativeResult<Vec<TranscriptSegmen
             })
         })
         .map_err(|error| error.to_string())?;
-    rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
 }
 
 pub fn insert_context(project_path: &Path, context: &ProjectContext) -> NativeResult<()> {
@@ -331,7 +349,13 @@ pub fn insert_context(project_path: &Path, context: &ProjectContext) -> NativeRe
     connection
         .execute(
             "INSERT INTO contexts (id, name, source, content, created_at) VALUES (?1,?2,?3,?4,?5)",
-            params![context.id, context.name, context.source, context.content, context.created_at],
+            params![
+                context.id,
+                context.name,
+                context.source,
+                context.content,
+                context.created_at
+            ],
         )
         .map_err(|error| error.to_string())?;
     Ok(())
@@ -353,7 +377,8 @@ pub fn list_contexts(project_path: &Path) -> NativeResult<Vec<ProjectContext>> {
             })
         })
         .map_err(|error| error.to_string())?;
-    rows.collect::<Result<Vec<_>, _>>().map_err(|error| error.to_string())
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())
 }
 
 pub fn project_summary(project_path: &Path) -> NativeResult<ProjectSummary> {
@@ -416,5 +441,4 @@ mod tests {
         assert!(!temporary.exists());
         assert!(!path.with_extension("json.bak").exists());
     }
-
 }

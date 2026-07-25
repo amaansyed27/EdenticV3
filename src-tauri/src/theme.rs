@@ -62,7 +62,11 @@ pub fn apply_window_theme(window: &WebviewWindow, theme: &str) -> Result<(), Str
     };
 
     window
-        .set_theme(Some(if dark_surface { Theme::Dark } else { Theme::Light }))
+        .set_theme(Some(if dark_surface {
+            Theme::Dark
+        } else {
+            Theme::Light
+        }))
         .map_err(|error| format!("Could not update the native window theme: {error}"))?;
     window
         .set_icon(icon_for_surface(dark_surface))

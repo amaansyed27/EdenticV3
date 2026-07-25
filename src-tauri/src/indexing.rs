@@ -1,8 +1,7 @@
 use crate::{
     media::{self, MediaKind},
     models::{AppSettings, IndexJob, MediaAsset, Scene, TranscriptSegment},
-    storage,
-    RuntimeState,
+    storage, RuntimeState,
 };
 use chrono::Utc;
 use serde::Deserialize;
@@ -43,14 +42,20 @@ fn compact_process_error(label: &str, stderr: &[u8]) -> String {
 
 fn even(value: u32) -> u32 {
     let value = value.max(2);
-    if value % 2 == 0 { value } else { value + 1 }
+    if value % 2 == 0 {
+        value
+    } else {
+        value + 1
+    }
 }
 
 fn scaled_dimensions(asset: &MediaAsset, max_width: u32) -> (u32, u32) {
     let source_width = asset.width.max(2);
     let source_height = asset.height.max(2);
     let width = even(source_width.min(max_width.max(2)));
-    let height = even(((f64::from(width) * f64::from(source_height)) / f64::from(source_width)).round() as u32);
+    let height = even(
+        ((f64::from(width) * f64::from(source_height)) / f64::from(source_width)).round() as u32,
+    );
     (width, height)
 }
 
@@ -66,7 +71,9 @@ fn run_ffmpeg(command: &mut Command, label: &str) -> Result<Output, String> {
 }
 
 fn create_poster(asset: &MediaAsset, project_path: &Path) -> Result<PathBuf, String> {
-    let output_path = project_path.join("Cache/posters").join(format!("{}.jpg", asset.id));
+    let output_path = project_path
+        .join("Cache/posters")
+        .join(format!("{}.jpg", asset.id));
     let seek = if asset.duration > 4.0 { "2" } else { "0" };
     let (width, height) = scaled_dimensions(asset, 960);
     let scale = format!("scale={width}:{height}");
@@ -81,7 +88,9 @@ fn create_poster(asset: &MediaAsset, project_path: &Path) -> Result<PathBuf, Str
 }
 
 fn create_waveform(asset: &MediaAsset, project_path: &Path) -> Result<PathBuf, String> {
-    let output_path = project_path.join("Cache/waveforms").join(format!("{}.svg", asset.id));
+    let output_path = project_path
+        .join("Cache/waveforms")
+        .join(format!("{}.svg", asset.id));
     let mut command = Command::new("ffmpeg");
     command
         .args(["-loglevel", "error", "-i"])
@@ -140,7 +149,9 @@ fn create_proxy(
         return Ok(None);
     }
 
-    let output_path = project_path.join("Proxies").join(format!("{}.mp4", asset.id));
+    let output_path = project_path
+        .join("Proxies")
+        .join(format!("{}.mp4", asset.id));
     let (width, height) = scaled_dimensions(asset, target_width);
     let scale = format!("scale={width}:{height}");
     let use_gpu = settings.compute_mode != "cpu"
@@ -179,23 +190,15 @@ fn create_proxy(
 }
 
 fn create_audio_proxy(asset: &MediaAsset, project_path: &Path) -> Result<PathBuf, String> {
-    let output_path = project_path.join("Proxies").join(format!("{}.m4a", asset.id));
+    let output_path = project_path
+        .join("Proxies")
+        .join(format!("{}.m4a", asset.id));
     let mut command = Command::new("ffmpeg");
     command
         .args(["-loglevel", "error", "-y", "-i"])
         .arg(&asset.managed_path)
         .args([
-            "-vn",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "192k",
-            "-ar",
-            "48000",
-            "-ac",
-            "2",
-            "-strict",
-            "-2",
+            "-vn", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2", "-strict", "-2",
         ])
         .arg(&output_path);
     run_ffmpeg(&mut command, "Audio playback proxy failed")?;
@@ -206,7 +209,14 @@ fn scene_boundaries(asset: &MediaAsset) -> (Vec<f64>, bool) {
     let output = Command::new("ffmpeg")
         .arg("-i")
         .arg(&asset.managed_path)
-        .args(["-vf", "select=gt(scene\\,0.32),showinfo", "-an", "-f", "null", "-"])
+        .args([
+            "-vf",
+            "select=gt(scene\\,0.32),showinfo",
+            "-an",
+            "-f",
+            "null",
+            "-",
+        ])
         .output();
     let Ok(output) = output else {
         return (vec![0.0], false);
@@ -214,7 +224,9 @@ fn scene_boundaries(asset: &MediaAsset) -> (Vec<f64>, bool) {
     let log = String::from_utf8_lossy(&output.stderr);
     let mut values = vec![0.0];
     for line in log.lines() {
-        let Some(position) = line.find("pts_time:") else { continue };
+        let Some(position) = line.find("pts_time:") else {
+            continue;
+        };
         let value = line[position + 9..]
             .split_whitespace()
             .next()
@@ -280,7 +292,10 @@ fn create_scenes(asset: &MediaAsset, project_path: &Path) -> Vec<Scene> {
         .collect()
 }
 
-fn transcribe(asset: &MediaAsset, settings: &AppSettings) -> Result<Vec<TranscriptSegment>, String> {
+fn transcribe(
+    asset: &MediaAsset,
+    settings: &AppSettings,
+) -> Result<Vec<TranscriptSegment>, String> {
     let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../python/transcribe.py");
     if !script.exists() {
         return Err("The local transcription helper is missing".into());
@@ -362,7 +377,11 @@ where
         if !progress(0.94, "Saving image preview") {
             return Err("Indexing cancelled".into());
         }
-        let status = if warnings.is_empty() { "ready" } else { "partial" };
+        let status = if warnings.is_empty() {
+            "ready"
+        } else {
+            "partial"
+        };
         storage::replace_index(project_path, &asset, &scenes, &[], status)?;
         return Ok((!warnings.is_empty()).then(|| warnings.join(" · ")));
     }
@@ -395,7 +414,11 @@ where
         if !progress(0.94, "Saving audio map") {
             return Err("Indexing cancelled".into());
         }
-        let status = if warnings.is_empty() { "ready" } else { "partial" };
+        let status = if warnings.is_empty() {
+            "ready"
+        } else {
+            "partial"
+        };
         storage::replace_index(project_path, &asset, &[], &transcript, status)?;
         return Ok((!warnings.is_empty()).then(|| warnings.join(" · ")));
     }
@@ -444,7 +467,11 @@ where
     if !progress(0.94, "Saving Video Map") {
         return Err("Indexing cancelled".into());
     }
-    let status = if warnings.is_empty() { "ready" } else { "partial" };
+    let status = if warnings.is_empty() {
+        "ready"
+    } else {
+        "partial"
+    };
     storage::replace_index(project_path, &asset, &scenes, &transcript, status)?;
     Ok((!warnings.is_empty()).then(|| warnings.join(" · ")))
 }
@@ -454,8 +481,12 @@ fn update_job(
     job_id: &str,
     updater: impl FnOnce(&mut IndexJob),
 ) -> bool {
-    let Ok(mut jobs) = jobs.lock() else { return false };
-    let Some(job) = jobs.get_mut(job_id) else { return false };
+    let Ok(mut jobs) = jobs.lock() else {
+        return false;
+    };
+    let Some(job) = jobs.get_mut(job_id) else {
+        return false;
+    };
     updater(job);
     job.status != "cancelled"
 }
@@ -502,14 +533,19 @@ pub fn start_index(
     std::thread::spawn(move || {
         loop {
             let claimed = {
-                let Ok(mut all_jobs) = jobs.lock() else { return };
+                let Ok(mut all_jobs) = jobs.lock() else {
+                    return;
+                };
                 let cancelled = all_jobs
                     .get(&job_id)
                     .is_none_or(|job| job.status == "cancelled");
                 if cancelled {
                     return;
                 }
-                let active = all_jobs.values().filter(|job| job.status == "running").count();
+                let active = all_jobs
+                    .values()
+                    .filter(|job| job.status == "running")
+                    .count();
                 if active < usize::from(settings.max_concurrent_jobs) {
                     if let Some(job) = all_jobs.get_mut(&job_id) {
                         job.status = "running".into();
@@ -580,8 +616,13 @@ pub fn get_index_jobs(
 
 #[tauri::command]
 pub fn cancel_index_job(job_id: String, state: State<'_, RuntimeState>) -> Result<bool, String> {
-    let mut jobs = state.jobs.lock().map_err(|_| "Job lock was poisoned".to_string())?;
-    let job = jobs.get_mut(&job_id).ok_or_else(|| "Index job not found".to_string())?;
+    let mut jobs = state
+        .jobs
+        .lock()
+        .map_err(|_| "Job lock was poisoned".to_string())?;
+    let job = jobs
+        .get_mut(&job_id)
+        .ok_or_else(|| "Index job not found".to_string())?;
     if ["queued", "running"].contains(&job.status.as_str()) {
         job.status = "cancelled".into();
         job.stage = "Cancelling".into();

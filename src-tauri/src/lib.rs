@@ -1,5 +1,5 @@
-mod assistant;
 mod asset_commands;
+mod assistant;
 mod commands;
 mod indexing;
 mod media;
