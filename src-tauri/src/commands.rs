@@ -203,14 +203,32 @@ pub fn import_media(
 ) -> Result<Vec<MediaAsset>, String> {
     let project_path = PathBuf::from(project_path);
     let manifest = storage::load_manifest(&project_path)?;
+    const VIDEO: &[&str] = &[
+        "mp4", "mov", "mkv", "avi", "webm", "m4v", "mpeg", "mpg", "wmv", "flv",
+        "ts", "m2ts", "3gp",
+    ];
+    const AUDIO: &[&str] = &[
+        "wav", "mp3", "m4a", "aac", "flac", "ogg", "opus", "wma", "aiff", "aif",
+    ];
+    const IMAGE: &[&str] = &[
+        "png", "jpg", "jpeg", "webp", "gif", "bmp", "tif", "tiff", "avif",
+    ];
+    let supported = VIDEO
+        .iter()
+        .chain(AUDIO)
+        .chain(IMAGE)
+        .copied()
+        .collect::<Vec<_>>();
     let Some(files) = rfd::FileDialog::new()
-        .set_title("Import source video")
-        .add_filter("Video", &["mp4", "mov", "mkv", "avi", "webm", "m4v"])
+        .set_title("Import media")
+        .add_filter("Supported media", &supported)
+        .add_filter("Video", VIDEO)
+        .add_filter("Audio", AUDIO)
+        .add_filter("Images", IMAGE)
         .pick_files()
     else {
         return Ok(Vec::new());
     };
-    let originals = project_path.join("Media/Originals");
     let mut imported = Vec::new();
     for source in files {
         let file_name = source
@@ -218,7 +236,9 @@ pub fn import_media(
             .ok_or_else(|| "A selected file has no file name".to_string())?
             .to_string_lossy()
             .into_owned();
-        let destination = media::unique_destination(&originals, &file_name);
+        let managed_directory = project_path.join(media::managed_media_directory(&source));
+        fs::create_dir_all(&managed_directory).map_err(|error| error.to_string())?;
+        let destination = media::unique_destination(&managed_directory, &file_name);
         fs::copy(&source, &destination)
             .map_err(|error| format!("Could not copy {}: {error}", source.display()))?;
         match media::probe_media(&destination, &manifest.id, &source) {
