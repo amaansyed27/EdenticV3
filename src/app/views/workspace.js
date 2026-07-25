@@ -95,12 +95,18 @@ function contextsPanel(contexts) {
   }
   return `
     <div class="context-list">
-      ${contexts.map((context) => `
-        <article class="context-row">
-          <span>${icon("spark", 17)}</span>
-          <div><strong>${escapeHtml(context.name)}</strong><small>${escapeHtml(context.source)}</small></div>
-        </article>`).join("")}
-      <button class="text-button context-add" type="button" data-action="add-context">${icon("plus", 15)} Add another</button>
+      <div class="context-list-heading">
+        <span>${contexts.length} saved ${contexts.length === 1 ? "item" : "items"}</span>
+        <button class="text-button" type="button" data-action="add-context">${icon("plus", 15)} Add</button>
+      </div>
+      ${contexts.map((context, index) => `
+        <details class="context-row" ${index === 0 ? "open" : ""}>
+          <summary>
+            <span>${icon("spark", 17)}</span>
+            <span><strong>${escapeHtml(context.name)}</strong><small>${escapeHtml(context.source)}</small></span>
+          </summary>
+          <p class="context-body">${escapeHtml(context.content)}</p>
+        </details>`).join("")}
     </div>`;
 }
 
@@ -284,7 +290,7 @@ export function renderWorkspace(state) {
           <span>Slice 1 workspace</span>
         </div>
         <div class="editor-header-actions">
-          <button class="button button-quiet" type="button" data-action="add-context">${icon("spark", 16)} Context</button>
+          <button class="button button-quiet" type="button" data-action="view-context">${icon("spark", 16)} Project context${state.contexts.length ? ` · ${state.contexts.length}` : ""}</button>
           <button class="icon-button" type="button" data-action="open-settings" aria-label="Settings">${icon("gear", 18)}</button>
         </div>
       </header>
