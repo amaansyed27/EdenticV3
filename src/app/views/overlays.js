@@ -103,7 +103,7 @@ function providersSettings(state) {
             <button class="button button-primary" type="button" data-action="save-openrouter-key">Save key</button>
           </div>
         </label>
-        <p class="privacy-note">${icon("spark", 15)} Source video never leaves the device during local indexing. Future AI requests will show exactly what derived context is being sent.</p>
+        <p class="privacy-note">${icon("info", 15)} Source video never leaves the device during local indexing. Future AI requests will show exactly what derived context is being sent.</p>
       </div>
       <div class="settings-group">
         <label class="field">
@@ -192,10 +192,10 @@ export function renderSettings(state) {
         <aside class="settings-nav">
           <div class="settings-nav-heading"><span class="brand-mark small"><i></i></span><strong>Settings</strong></div>
           <nav>
-            ${settingNavItem("appearance", "Appearance", "spark", active === "appearance")}
+            ${settingNavItem("appearance", "Appearance", "palette", active === "appearance")}
             ${settingNavItem("performance", "Performance", "waveform", active === "performance")}
             ${settingNavItem("media", "Media and cache", "folder", active === "media")}
-            ${settingNavItem("providers", "AI providers", "spark", active === "providers")}
+            ${settingNavItem("providers", "AI providers", "link", active === "providers")}
             ${settingNavItem("recovery", "Recovery", "refresh", active === "recovery")}
           </nav>
           <div class="settings-future">
