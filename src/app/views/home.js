@@ -104,7 +104,7 @@ export function renderHome(state) {
             <div class="empty-home">
               <span class="empty-home-icon">${icon("film", 30)}</span>
               <h3>${state.projects.length ? "No matching projects" : "Create your first project"}</h3>
-              <p>${state.projects.length ? "Try another project name." : "Choose a format, bring in footage and build your Video Map."}</p>
+              <p>${state.projects.length ? "Try another project name." : "Choose a format, import media and prepare its local source data."}</p>
               ${state.projects.length ? "" : '<button class="button button-primary" type="button" data-action="new-project">New project</button>'}
             </div>`
         }
