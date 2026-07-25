@@ -8,6 +8,10 @@ function sourcePlayer() {
   return document.querySelector("#source-player");
 }
 
+function isSourceMediaElement(target) {
+  return target instanceof HTMLMediaElement && target.id === "source-player";
+}
+
 function sourceScrubber() {
   return document.querySelector("[data-source-scrubber]");
 }
@@ -34,9 +38,27 @@ function updateScrubber(player = sourcePlayer()) {
   const progressFill = scrubber.querySelector("#waveform-progress");
   if (playhead) playhead.style.left = `${progress}%`;
   if (progressFill) progressFill.style.width = `${progress}%`;
+  const currentLabel = document.querySelector("#current-time");
+  if (currentLabel) currentLabel.textContent = timeLabel(currentTime);
   scrubber.setAttribute("aria-valuemax", String(duration));
   scrubber.setAttribute("aria-valuenow", String(currentTime));
   scrubber.setAttribute("aria-valuetext", timeLabel(currentTime));
+}
+
+function setSourceTime(player, seconds) {
+  const duration = sourceDuration(player);
+  if (duration <= 0) return;
+  const target = Math.min(duration, Math.max(0, seconds));
+  const apply = () => {
+    try {
+      player.currentTime = target;
+      updateScrubber(player);
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Could not seek this source", "danger");
+    }
+  };
+  if (player.readyState >= 1) apply();
+  else player.addEventListener("loadedmetadata", apply, { once: true });
 }
 
 function seekToRatio(scrubber, clientX) {
@@ -47,8 +69,7 @@ function seekToRatio(scrubber, clientX) {
   const ratio = Math.min(1, Math.max(0, (clientX - bounds.left) / bounds.width));
   const duration = sourceDuration(player, scrubber);
   if (duration <= 0) return;
-  player.currentTime = ratio * duration;
-  updateScrubber(player);
+  setSourceTime(player, ratio * duration);
 }
 
 function adjustSourceTime(delta, absolute = false) {
@@ -56,15 +77,31 @@ function adjustSourceTime(delta, absolute = false) {
   if (!player) return;
   const duration = sourceDuration(player);
   if (duration <= 0) return;
-  player.currentTime = Math.min(duration, Math.max(0, absolute ? delta : player.currentTime + delta));
-  updateScrubber(player);
+  setSourceTime(player, absolute ? delta : player.currentTime + delta);
 }
 
 function toggleSourcePlayback() {
   const player = sourcePlayer();
   if (!player) return;
-  if (player.paused) player.play().catch(() => {});
-  else player.pause();
+  if (!player.paused) {
+    player.pause();
+    return;
+  }
+  if (player.ended) setSourceTime(player, 0);
+  player.play().catch((error) => {
+    notify(error instanceof Error ? `Playback failed: ${error.message}` : "Playback failed", "danger");
+  });
+}
+
+export function stopWorkspacePlayback() {
+  const player = sourcePlayer();
+  if (!player) return;
+  player.pause();
+  try {
+    player.currentTime = 0;
+  } catch {
+    // A source without loaded metadata can still be safely paused before removal.
+  }
 }
 
 export function captureWorkspacePlayback() {
@@ -101,6 +138,9 @@ export function restoreWorkspacePlayback(snapshot) {
 }
 
 async function handleWorkspaceAction(action, element) {
+  if (action === "toggle-play") {
+    toggleSourcePlayback();
+  }
   if (action === "toggle-media-panel") {
     patchState({ mediaPanelCollapsed: !state.mediaPanelCollapsed });
   }
@@ -170,11 +210,9 @@ export function installWorkspaceRuntime() {
   document.addEventListener("pointerup", finishScrubbing, true);
   document.addEventListener("pointercancel", finishScrubbing, true);
 
-  for (const eventName of ["timeupdate", "loadedmetadata", "durationchange"]) {
+  for (const eventName of ["timeupdate", "loadedmetadata", "durationchange", "seeked", "ended"]) {
     document.addEventListener(eventName, (event) => {
-      if (event.target instanceof HTMLVideoElement && event.target.id === "source-player") {
-        updateScrubber(event.target);
-      }
+      if (isSourceMediaElement(event.target)) updateScrubber(event.target);
     }, true);
   }
 
@@ -182,7 +220,7 @@ export function installWorkspaceRuntime() {
     const element = event.target instanceof Element ? event.target.closest("[data-action]") : null;
     if (!element) return;
     const action = element.dataset.action;
-    if (!["toggle-media-panel", "toggle-video-map-panel", "request-delete-asset", "close-delete-asset", "confirm-delete-asset"].includes(action)) return;
+    if (!["toggle-play", "toggle-media-panel", "toggle-video-map-panel", "request-delete-asset", "close-delete-asset", "confirm-delete-asset"].includes(action)) return;
     event.preventDefault();
     try {
       await handleWorkspaceAction(action, element);
