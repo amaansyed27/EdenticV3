@@ -178,6 +178,30 @@ fn create_proxy(
     Ok(Some(output_path))
 }
 
+fn create_audio_proxy(asset: &MediaAsset, project_path: &Path) -> Result<PathBuf, String> {
+    let output_path = project_path.join("Proxies").join(format!("{}.m4a", asset.id));
+    let mut command = Command::new("ffmpeg");
+    command
+        .args(["-loglevel", "error", "-y", "-i"])
+        .arg(&asset.managed_path)
+        .args([
+            "-vn",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-ar",
+            "48000",
+            "-ac",
+            "2",
+            "-strict",
+            "-2",
+        ])
+        .arg(&output_path);
+    run_ffmpeg(&mut command, "Audio playback proxy failed")?;
+    Ok(output_path)
+}
+
 fn scene_boundaries(asset: &MediaAsset) -> (Vec<f64>, bool) {
     let output = Command::new("ffmpeg")
         .arg("-i")
@@ -344,7 +368,14 @@ where
     }
 
     if kind == MediaKind::Audio {
-        if !progress(0.35, "Rendering audio waveform") {
+        if !progress(0.18, "Preparing audio playback") {
+            return Err("Indexing cancelled".into());
+        }
+        match create_audio_proxy(&asset, project_path) {
+            Ok(path) => asset.proxy_path = path.to_string_lossy().into_owned(),
+            Err(error) => warnings.push(error),
+        }
+        if !progress(0.38, "Rendering audio waveform") {
             return Err("Indexing cancelled".into());
         }
         match create_waveform(&asset, project_path) {
