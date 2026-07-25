@@ -186,7 +186,9 @@ async function handleAction(action, element) {
   if (action === "close-create-project") patchState({ createProjectOpen: false });
   if (action === "open-settings") patchState({ settingsOpen: true });
   if (action === "close-settings") patchState({ settingsOpen: false, recoveryDialog: null });
-  if (action === "settings-section") patchState({ settingsSection: element.dataset.value });
+  if (action === "settings-section") {
+    patchState({ settingsSection: element.dataset.value, settings: readSettingsForm() });
+  }
   if (action === "project-view") patchState({ projectView: element.dataset.value });
   if (action === "map-tab") patchState({ videoMapTab: element.dataset.value });
   if (action === "add-context") patchState({ contextDialogOpen: true });
@@ -297,24 +299,23 @@ async function handleAction(action, element) {
   }
   if (action === "save-settings") {
     const settings = readSettingsForm();
-    await saveSettings(settings);
-    applyTheme(settings.theme);
-    patchState({ settings, settingsOpen: false, recoveryDialog: null });
-    notify("Settings saved", "success");
+    const persisted = await saveSettings(settings);
+    applyTheme(persisted.theme);
+    patchState({ settings: persisted, settingsOpen: false, recoveryDialog: null });
+    notify("Settings saved and verified", "success");
   }
   if (action === "save-openrouter-key") {
     const input = document.querySelector("#openrouter-key");
     if (!input?.value.trim()) return notify("Enter an OpenRouter API key", "danger");
+    const draft = readSettingsForm();
     await saveOpenRouterKey(input.value.trim());
-    const settings = { ...state.settings, openrouterConfigured: true };
-    await saveSettings(settings);
+    const settings = await saveSettings({ ...draft, openrouterConfigured: true });
     patchState({ settings });
-    notify("OpenRouter key stored securely", "success");
+    notify("OpenRouter key stored and verified", "success");
   }
   if (action === "delete-openrouter-key") {
     await deleteOpenRouterKey();
-    const settings = { ...state.settings, openrouterConfigured: false };
-    await saveSettings(settings);
+    const settings = await saveSettings({ ...readSettingsForm(), openrouterConfigured: false });
     patchState({ settings });
     notify("OpenRouter key removed");
   }
@@ -330,8 +331,9 @@ async function handleAction(action, element) {
   if (action === "import-context-file") {
     const context = await importContext(state.activeProject.path);
     if (context) {
-      patchState({ contexts: [...state.contexts, context], contextDialogOpen: false });
-      notify("Context added", "success");
+      await refreshProject();
+      patchState({ contextDialogOpen: false });
+      notify("Context saved to the project", "success");
     }
   }
 }
@@ -373,13 +375,14 @@ async function handleSubmit(form) {
     startJobPolling();
   }
   if (form.id === "context-form") {
-    const context = await addPastedContext(
+    await addPastedContext(
       state.activeProject.path,
       data.get("name").trim(),
       data.get("content").trim(),
     );
-    patchState({ contexts: [...state.contexts, context], contextDialogOpen: false });
-    notify("Context added", "success");
+    await refreshProject();
+    patchState({ contextDialogOpen: false });
+    notify("Context saved to the project", "success");
   }
 }
 
