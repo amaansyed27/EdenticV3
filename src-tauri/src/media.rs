@@ -33,6 +33,44 @@ struct ProbeStream {
     duration: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MediaKind {
+    Video,
+    Audio,
+    Image,
+}
+
+pub fn media_kind(path: &Path) -> MediaKind {
+    let extension = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    if [
+        "png", "jpg", "jpeg", "webp", "gif", "bmp", "tif", "tiff", "avif",
+    ]
+    .contains(&extension.as_str())
+    {
+        MediaKind::Image
+    } else if [
+        "wav", "mp3", "m4a", "aac", "flac", "ogg", "opus", "wma", "aiff", "aif",
+    ]
+    .contains(&extension.as_str())
+    {
+        MediaKind::Audio
+    } else {
+        MediaKind::Video
+    }
+}
+
+pub fn managed_media_directory(path: &Path) -> &'static str {
+    match media_kind(path) {
+        MediaKind::Video => "Media/Originals",
+        MediaKind::Audio => "Media/Audio",
+        MediaKind::Image => "Media/Images",
+    }
+}
+
 #[derive(Debug)]
 pub struct IndexResult {
     pub asset: MediaAsset,
@@ -122,12 +160,15 @@ pub fn probe_media(path: &Path, project_id: &str, original_path: &Path) -> Nativ
         serde_json::from_slice(&output.stdout).map_err(|error| format!("Invalid ffprobe response: {error}"))?;
     let video = payload.streams.iter().find(|stream| stream.codec_type.as_deref() == Some("video"));
     let audio = payload.streams.iter().find(|stream| stream.codec_type.as_deref() == Some("audio"));
-    let video = video.ok_or_else(|| "The selected file does not contain a video stream".to_string())?;
+    if video.is_none() && audio.is_none() {
+        return Err("The selected file does not contain supported video, audio or image media".into());
+    }
     let duration = payload
         .format
         .duration
         .as_deref()
-        .or(video.duration.as_deref())
+        .or_else(|| video.and_then(|stream| stream.duration.as_deref()))
+        .or_else(|| audio.and_then(|stream| stream.duration.as_deref()))
         .and_then(|value| value.parse::<f64>().ok())
         .unwrap_or_default();
     let metadata = fs::metadata(path).map_err(|error| error.to_string())?;
@@ -138,11 +179,13 @@ pub fn probe_media(path: &Path, project_id: &str, original_path: &Path) -> Nativ
         original_path: original_path.to_string_lossy().into_owned(),
         managed_path: path.to_string_lossy().into_owned(),
         duration,
-        width: video.width.unwrap_or_default(),
-        height: video.height.unwrap_or_default(),
-        frame_rate: parse_rate(video.r_frame_rate.as_deref()),
+        width: video.and_then(|stream| stream.width).unwrap_or_default(),
+        height: video.and_then(|stream| stream.height).unwrap_or_default(),
+        frame_rate: parse_rate(video.and_then(|stream| stream.r_frame_rate.as_deref())),
         size_bytes: metadata.len(),
-        video_codec: video.codec_name.clone().unwrap_or_else(|| "unknown".into()),
+        video_codec: video
+            .and_then(|stream| stream.codec_name.clone())
+            .unwrap_or_else(|| "none".into()),
         audio_codec: audio
             .and_then(|stream| stream.codec_name.clone())
             .unwrap_or_else(|| "none".into()),
