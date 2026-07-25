@@ -17,6 +17,46 @@ function assetDetails(asset, kind) {
   return `${asset.width}×${asset.height} · ${formatBytes(asset.sizeBytes)}`;
 }
 
+function processingLabels(kind) {
+  if (kind === "audio") {
+    return {
+      title: "Audio Map",
+      shortTitle: "AUDIO MAP",
+      icon: "waveform",
+      build: "Build Audio Map",
+      rebuild: "Rebuild Audio Map",
+      ready: "Audio Map ready",
+      partial: "Audio Map ready with warnings",
+      waiting: "Awaiting local audio analysis",
+      firstTab: "Markers",
+    };
+  }
+  if (kind === "image") {
+    return {
+      title: "Image Preview",
+      shortTitle: "IMAGE",
+      icon: "media",
+      build: "Prepare Image",
+      rebuild: "Refresh Image Preview",
+      ready: "Image preview ready",
+      partial: "Image preview ready with warnings",
+      waiting: "Image preview not prepared",
+      firstTab: "Preview",
+    };
+  }
+  return {
+    title: "Video Map",
+    shortTitle: "VIDEO MAP",
+    icon: "film",
+    build: "Build Video Map",
+    rebuild: "Rebuild Video Map",
+    ready: "Video Map ready",
+    partial: "Video Map ready with warnings",
+    waiting: "Awaiting local video analysis",
+    firstTab: "Scenes",
+  };
+}
+
 function assetItem(asset, selected) {
   const kind = assetKind(asset);
   const preview = toAssetUrl(kind === "image" ? asset.posterPath || asset.managedPath : asset.posterPath);
@@ -34,13 +74,18 @@ function assetItem(asset, selected) {
     </button>`;
 }
 
-function scenesPanel(state, scenes) {
+function scenesPanel(state, scenes, kind) {
   if (!scenes.length) {
+    const emptyCopy = kind === "audio"
+      ? ["No visual markers", "Audio sources use their waveform and transcript instead of visual scenes."]
+      : kind === "image"
+        ? ["Preview not prepared", "Prepare this image to create a compatible local preview."]
+        : ["No scenes yet", "Build the Video Map to detect visual changes in this source."];
     return `
       <div class="map-empty">
-        ${icon("film", 25)}
-        <h3>No scenes yet</h3>
-        <p>Index this source to detect visual changes and build its Video Map.</p>
+        ${icon(kind === "audio" ? "waveform" : kind === "image" ? "media" : "film", 25)}
+        <h3>${emptyCopy[0]}</h3>
+        <p>${emptyCopy[1]}</p>
       </div>`;
   }
   return `
@@ -59,7 +104,7 @@ function scenesPanel(state, scenes) {
     </div>`;
 }
 
-function transcriptPanel(transcript, query) {
+function transcriptPanel(transcript, query, kind) {
   const normalized = query.trim().toLowerCase();
   const matches = transcript.filter((segment) => segment.text.toLowerCase().includes(normalized));
   if (!transcript.length) {
@@ -67,7 +112,7 @@ function transcriptPanel(transcript, query) {
       <div class="map-empty">
         ${icon("waveform", 25)}
         <h3>No transcript yet</h3>
-        <p>Configure local transcription in Settings, then index this source.</p>
+        <p>${kind === "image" ? "Still images do not contain audio to transcribe." : "Configure local transcription in Settings, then process this source."}</p>
       </div>`;
   }
   if (!matches.length) {
@@ -87,7 +132,7 @@ function contextsPanel(contexts) {
   if (!contexts.length) {
     return `
       <div class="map-empty">
-        ${icon("spark", 25)}
+        ${icon("note", 25)}
         <h3>Add project context</h3>
         <p>Attach a prompt, implementation summary, recipe or event notes to explain the footage.</p>
         <button class="button button-quiet" type="button" data-action="add-context">Add context</button>
@@ -102,7 +147,7 @@ function contextsPanel(contexts) {
       ${contexts.map((context, index) => `
         <details class="context-row" ${index === 0 ? "open" : ""}>
           <summary>
-            <span>${icon("spark", 17)}</span>
+            <span>${icon("note", 17)}</span>
             <span><strong>${escapeHtml(context.name)}</strong><small>${escapeHtml(context.source)}</small></span>
           </summary>
           <p class="context-body">${escapeHtml(context.content)}</p>
@@ -182,7 +227,7 @@ function deleteAssetDialog(state) {
           <div><p class="eyebrow">PROJECT MEDIA</p><h2>Remove source?</h2></div>
           <button class="icon-button" type="button" data-action="close-delete-asset" aria-label="Close">${icon("close", 19)}</button>
         </div>
-        <p class="dialog-copy"><strong>${escapeHtml(asset.name)}</strong> will be removed from this project together with its proxy and Video Map data.</p>
+        <p class="dialog-copy"><strong>${escapeHtml(asset.name)}</strong> will be removed from this project together with its proxy and derived source data.</p>
         <p class="delete-boundary">The original file at its external import location will not be touched.</p>
         ${busy ? `<p class="delete-busy">Cancel indexing and wait for it to stop before removing this source.</p>` : ""}
         <div class="dialog-footer">
@@ -202,6 +247,8 @@ export function renderWorkspace(state) {
     ? state.jobs.find((job) => job.assetId === selectedAsset.id && ["queued", "running"].includes(job.status))
     : null;
   const selectedKind = selectedAsset ? assetKind(selectedAsset) : null;
+  const processing = processingLabels(selectedKind);
+  const sourcePrepared = ["ready", "partial"].includes(selectedAsset?.indexStatus);
   const isTemporal = selectedKind === "video" || selectedKind === "audio";
   const mediaUrl = selectedAsset
     ? toAssetUrl(selectedKind === "image"
@@ -246,17 +293,17 @@ export function renderWorkspace(state) {
       </div>`;
 
   const mapPanel = state.videoMapPanelCollapsed
-    ? collapsedRail("toggle-video-map-panel", "spark", "Video Map", "right")
+    ? collapsedRail("toggle-video-map-panel", processing.icon, processing.title, "right")
     : `
       <div class="panel-header map-header">
-        <div><p class="panel-kicker">SOURCE INTELLIGENCE</p><h2>Video Map</h2></div>
+        <div><p class="panel-kicker">LOCAL SOURCE DATA</p><h2>${processing.title}</h2></div>
         <div class="panel-header-actions">
           <span class="local-badge">LOCAL</span>
           <button class="icon-button panel-collapse-button" type="button" data-action="toggle-video-map-panel" aria-label="Collapse Video Map panel">${icon("chevronRight", 18)}</button>
         </div>
       </div>
       <div class="map-tabs" role="tablist">
-        <button type="button" role="tab" data-action="map-tab" data-value="scenes" class="${state.videoMapTab === "scenes" ? "active" : ""}">Scenes <span>${scenes.length}</span></button>
+        <button type="button" role="tab" data-action="map-tab" data-value="scenes" class="${state.videoMapTab === "scenes" ? "active" : ""}">${processing.firstTab} <span>${scenes.length}</span></button>
         <button type="button" role="tab" data-action="map-tab" data-value="transcript" class="${state.videoMapTab === "transcript" ? "active" : ""}">Transcript <span>${transcript.length}</span></button>
         <button type="button" role="tab" data-action="map-tab" data-value="context" class="${state.videoMapTab === "context" ? "active" : ""}">Context <span>${state.contexts.length}</span></button>
       </div>
@@ -265,13 +312,13 @@ export function renderWorkspace(state) {
         : ""}
       <div class="map-content">
         ${state.videoMapTab === "scenes"
-          ? scenesPanel(state, scenes)
+          ? scenesPanel(state, scenes, selectedKind)
           : state.videoMapTab === "transcript"
-            ? transcriptPanel(transcript, state.videoMapQuery)
+            ? transcriptPanel(transcript, state.videoMapQuery, selectedKind)
             : contextsPanel(state.contexts)}
       </div>
       <div class="map-footer">
-        <span>${icon("clock", 14)} ${selectedAsset?.indexStatus === "ready" ? "Index ready" : selectedAsset?.indexStatus === "partial" ? "Index ready with warnings" : "Awaiting local index"}</span>
+        <span>${icon("clock", 14)} ${selectedAsset?.indexStatus === "ready" ? processing.ready : selectedAsset?.indexStatus === "partial" ? processing.partial : processing.waiting}</span>
       </div>`;
 
   return `
@@ -286,11 +333,11 @@ export function renderWorkspace(state) {
           </div>
         </div>
         <div class="workspace-stage">
-          <span class="stage-badge">VIDEO MAP</span>
+          <span class="stage-badge">${processing.shortTitle}</span>
           <span>Slice 1 workspace</span>
         </div>
         <div class="editor-header-actions">
-          <button class="button button-quiet" type="button" data-action="view-context">${icon("spark", 16)} Project context${state.contexts.length ? ` · ${state.contexts.length}` : ""}</button>
+          <button class="button button-quiet" type="button" data-action="view-context">${icon("note", 16)} Project context${state.contexts.length ? ` · ${state.contexts.length}` : ""}</button>
           <button class="icon-button" type="button" data-action="open-settings" aria-label="Settings">${icon("gear", 18)}</button>
         </div>
       </header>
@@ -326,11 +373,11 @@ export function renderWorkspace(state) {
               </div>
               <div class="source-overview-actions">
                 ${activeIndexJob
-                  ? `<button class="button button-primary" type="button" disabled>${icon("spark", 16)} ${escapeHtml(activeIndexJob.stage)}</button>`
-                  : selectedAsset && selectedAsset.indexStatus !== "ready"
-                    ? `<button class="button button-primary" type="button" data-action="index-asset" data-asset-id="${selectedAsset.id}">${icon("spark", 16)} Build Video Map</button>`
+                  ? `<button class="button button-primary" type="button" disabled>${icon("clock", 16)} ${escapeHtml(activeIndexJob.stage)}</button>`
+                  : selectedAsset && !sourcePrepared
+                    ? `<button class="button button-primary" type="button" data-action="index-asset" data-asset-id="${selectedAsset.id}">${icon(processing.icon, 16)} ${processing.build}</button>`
                     : selectedAsset
-                      ? `<button class="button button-quiet" type="button" data-action="index-asset" data-asset-id="${selectedAsset.id}">${icon("refresh", 15)} Reindex</button>`
+                      ? `<button class="button button-quiet" type="button" data-action="index-asset" data-asset-id="${selectedAsset.id}">${icon("refresh", 15)} ${processing.rebuild}</button>`
                       : ""}
                 ${selectedAsset ? `<button class="icon-button source-delete-button" type="button" data-action="request-delete-asset" data-asset-id="${selectedAsset.id}" aria-label="Remove source">${icon("trash", 17)}</button>` : ""}
               </div>
@@ -349,7 +396,7 @@ export function renderWorkspace(state) {
               aria-valuetext="00:00"
               title="Click or drag to seek"
             >
-              ${waveformUrl ? `<img src="${escapeHtml(waveformUrl)}" alt="Audio waveform" />` : `<div class="waveform-unavailable">Waveform builds with the local media map</div>`}
+              ${waveformUrl ? `<img src="${escapeHtml(waveformUrl)}" alt="Audio waveform" />` : `<div class="waveform-unavailable">Waveform is prepared locally for this source</div>`}
               <div class="waveform-progress" id="waveform-progress"></div>
               <div class="waveform-playhead" id="waveform-playhead"></div>
             </div>` : `<div class="still-source-note">${icon("media", 15)} Still image · no playback timeline</div>`}
@@ -357,7 +404,7 @@ export function renderWorkspace(state) {
               <span><small>Type</small>${selectedKind || "—"}</span>
               <span><small>Duration</small>${selectedKind === "image" ? "Still" : formatDuration(selectedAsset?.duration)}</span>
               <span><small>Codec</small>${selectedKind === "audio" ? selectedAsset?.audioCodec : selectedAsset?.videoCodec || "—"}</span>
-              <span><small>Index</small><b class="index-state ${selectedAsset?.indexStatus || "none"}">${selectedAsset?.indexStatus || "Waiting"}</b></span>
+              <span><small>Processing</small><b class="index-state ${selectedAsset?.indexStatus || "none"}">${selectedAsset?.indexStatus || "Waiting"}</b></span>
             </div>
           </div>
         </section>
