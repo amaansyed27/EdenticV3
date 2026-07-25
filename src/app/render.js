@@ -36,7 +36,12 @@ let jobTimer;
 
 function renderToast() {
   if (!state.toast) return "";
-  return `<div class="toast ${state.toast.tone}">${state.toast.tone === "danger" ? icon("close", 16) : icon("spark", 16)}<span>${escapeHtml(state.toast.message)}</span></div>`;
+  const toastIcon = state.toast.tone === "danger"
+    ? "close"
+    : state.toast.tone === "success"
+      ? "check"
+      : "info";
+  return `<div class="toast ${state.toast.tone}">${icon(toastIcon, 16)}<span>${escapeHtml(state.toast.message)}</span></div>`;
 }
 
 export function renderApp() {
@@ -102,7 +107,7 @@ function startJobPolling() {
       if (previouslyActive && !currentlyActive) {
         await refreshProject();
         const failure = jobs.find((job) => job.status === "failed");
-        notify(failure ? failure.error || "Indexing failed" : "Video Map is ready", failure ? "danger" : "success");
+        notify(failure ? failure.error || "Source processing failed" : "Source processing is ready", failure ? "danger" : "success");
       }
     } catch {
       // Polling is best-effort; command failures are surfaced by direct actions.
@@ -270,7 +275,7 @@ async function handleAction(action, element) {
       }
       patchState({ jobs: [...state.jobs, ...jobs] });
       startJobPolling();
-      notify(`${assets.length} ${assets.length === 1 ? "source" : "sources"} imported · building Video Map`, "success");
+      notify(`${assets.length} ${assets.length === 1 ? "source" : "sources"} imported · preparing locally`, "success");
     }
   }
   if (action === "select-asset") patchState({ selectedAssetId: element.dataset.assetId, selectedSceneId: null });
@@ -290,10 +295,6 @@ async function handleAction(action, element) {
       player.play().catch(() => {});
     }
     if (element.dataset.sceneId) patchState({ selectedSceneId: element.dataset.sceneId });
-  }
-  if (action === "toggle-play") {
-    const player = document.querySelector("#source-player");
-    if (player) player.paused ? player.play() : player.pause();
   }
   if (action === "set-theme") {
     const settings = { ...state.settings, theme: element.dataset.value };
