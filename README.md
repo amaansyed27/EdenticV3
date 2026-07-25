@@ -2,7 +2,7 @@
 
 Edentic is a professional, local-first video editor where manual editing, focused AI assistance and goal-driven agentic editing will share one non-destructive project and timeline.
 
-The product is built in verified slices. This repository currently contains **Slice 1**:
+The product is built in verified slices. Slice 1 is Windows-verified. This repository adds **Slice 2 for creator testing**:
 
 - first-run selection of the managed projects folder;
 - a real project home with New, Open, Recents, search and view controls;
@@ -16,8 +16,14 @@ The product is built in verified slices. This repository currently contains **Sl
 - Auto, GPU preferred, GPU + CPU and CPU-only processing modes;
 - OpenRouter BYOK stored through the operating-system credential vault;
 - `openrouter/free` as the initial default model.
+- local scene-aware frame sampling and visual deduplication;
+- local and approved remote semantic source maps persisted per project;
+- exact disclosure of frames, semantic map, transcript, Context and instruction;
+- a persistent assistant that produces strict structured edit plans;
+- range playback, enable/disable, timestamp editing, reordering and single-decision regeneration;
+- complete-plan acceptance or rejection without timeline changes.
 
-Timeline editing and the Manual, Assisted and Agentic modes are deliberately outside Slice 1.
+Slice 2 produces reviewable plans only. Timeline editing, rendering, voiceover generation and export remain out of scope.
 
 ## Technology
 
@@ -50,9 +56,9 @@ npm run tauri:dev
 
 The transcription model selected in Settings is downloaded by Faster-Whisper on its first use. Edentic still builds posters, waveforms, proxies and scene indexes when transcription is not installed.
 
-## Verify Slice 1
+## Verify Slice 2
 
-Follow [docs/SLICE-1-TESTING.md](docs/SLICE-1-TESTING.md). Report failures with screenshots or a screen recording, the exact action, terminal logs, media format and whether the problem remains after reopening the project.
+Follow [docs/SLICE-2-TESTING.md](docs/SLICE-2-TESTING.md). The [Slice 1 checklist](docs/SLICE-1-TESTING.md) remains available for regressions.
 
 The current module and storage boundaries are documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 

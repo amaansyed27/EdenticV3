@@ -143,6 +143,148 @@ pub struct ProjectContext {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct AnalysisFrame {
+    pub id: String,
+    pub asset_id: String,
+    pub timestamp: f64,
+    pub path: String,
+    pub reason: String,
+    pub perceptual_hash: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SemanticSegment {
+    pub id: String,
+    pub asset_id: String,
+    pub start: f64,
+    pub end: f64,
+    pub title: String,
+    pub description: String,
+    pub transcript_excerpt: String,
+    pub visual_observations: Vec<String>,
+    pub importance: String,
+    pub suggested_decision: String,
+    pub confidence: f64,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DisclosedSource {
+    pub asset_id: String,
+    pub name: String,
+    pub duration: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteRequestPreview {
+    pub id: String,
+    pub kind: String,
+    pub model: String,
+    pub asset_ids: Vec<String>,
+    pub sources: Vec<DisclosedSource>,
+    pub frames: Vec<AnalysisFrame>,
+    pub semantic_segments: Vec<SemanticSegment>,
+    pub transcript: Vec<TranscriptSegment>,
+    pub contexts: Vec<ProjectContext>,
+    pub prompt: String,
+    pub conversation_id: String,
+    pub decision_id: String,
+    pub estimated_bytes: u64,
+    pub first_approval_required: bool,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AssistantConversation {
+    pub id: String,
+    pub title: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AssistantMessage {
+    pub id: String,
+    pub conversation_id: String,
+    pub role: String,
+    pub content: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TextOverlaySuggestion {
+    pub text: String,
+    pub placement: String,
+    pub start: f64,
+    pub end: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct VoiceoverSuggestion {
+    pub text: String,
+    pub start: f64,
+    pub end: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlanDecision {
+    pub id: String,
+    pub asset_id: String,
+    pub source_name: String,
+    pub start: f64,
+    pub end: f64,
+    pub order_index: i64,
+    pub enabled: bool,
+    pub title: String,
+    pub action: String,
+    pub reason: String,
+    pub text_overlays: Vec<TextOverlaySuggestion>,
+    pub voiceover_sections: Vec<VoiceoverSuggestion>,
+    pub pacing: String,
+    pub warnings: Vec<String>,
+    pub confidence: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EditPlan {
+    pub id: String,
+    pub conversation_id: String,
+    pub prompt: String,
+    pub assistant_summary: String,
+    pub status: String,
+    pub decisions: Vec<PlanDecision>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiJob {
+    pub id: String,
+    pub project_path: String,
+    pub preview_id: String,
+    pub kind: String,
+    pub status: String,
+    pub stage: String,
+    pub progress: f64,
+    pub received_chars: usize,
+    pub error: String,
+    pub result_plan_id: String,
+    pub started_at: String,
+    pub finished_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct IndexJob {
     pub id: String,
     pub project_path: String,
@@ -180,6 +322,12 @@ pub struct ProjectSnapshot {
     pub scenes: Vec<Scene>,
     pub transcript: Vec<TranscriptSegment>,
     pub contexts: Vec<ProjectContext>,
+    pub analysis_frames: Vec<AnalysisFrame>,
+    pub semantic_segments: Vec<SemanticSegment>,
+    pub conversations: Vec<AssistantConversation>,
+    pub messages: Vec<AssistantMessage>,
+    pub edit_plans: Vec<EditPlan>,
+    pub remote_analysis_approved: bool,
     pub jobs: Vec<IndexJob>,
 }
 
@@ -198,6 +346,9 @@ pub struct OpenRouterModel {
     pub name: String,
     pub context_length: u64,
     pub is_free: bool,
+    pub input_modalities: Vec<String>,
+    pub output_modalities: Vec<String>,
+    pub supported_parameters: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -90,6 +90,7 @@ pub fn initialize_project_folders(project_path: &Path) -> NativeResult<()> {
         "Cache/posters",
         "Cache/waveforms",
         "Cache/scenes",
+        "Cache/analysis",
         "Backups",
     ];
     for directory in directories {
@@ -168,6 +169,7 @@ pub fn open_database(project_path: &Path) -> NativeResult<Connection> {
             ",
         )
         .map_err(|error| error.to_string())?;
+    crate::slice2_storage::ensure_schema(&connection)?;
     Ok(connection)
 }
 

@@ -42,6 +42,15 @@ fn stop_jobs(state: &RuntimeState) -> Result<(), String> {
         }
     }
     jobs.clear();
+    let mut ai_jobs = state.ai_jobs.lock()
+        .map_err(|_| "Assistant job lock was poisoned".to_string())?;
+    for job in ai_jobs.values_mut() {
+        if ["queued", "running"].contains(&job.status.as_str()) {
+            job.status = "cancelled".into();
+            job.stage = "Cancelled by recovery".into();
+        }
+    }
+    ai_jobs.clear();
     Ok(())
 }
 
@@ -95,6 +104,9 @@ fn clear_project_cache(project_path: &Path) -> Result<(usize, u64), String> {
             "
             DELETE FROM scenes;
             DELETE FROM transcript;
+            DELETE FROM analysis_frames;
+            DELETE FROM semantic_segments;
+            DELETE FROM remote_request_previews;
             UPDATE assets
                SET proxy_path = '', poster_path = '', waveform_path = '', index_status = 'waiting';
             ",
@@ -147,6 +159,10 @@ fn repair_project(project_path: &Path) -> Result<(), String> {
                 .map_err(|error| error.to_string())?;
             connection
                 .execute("DELETE FROM transcript WHERE asset_id=?1", [asset.id.as_str()])
+                .map_err(|error| error.to_string())?;
+            connection.execute("DELETE FROM analysis_frames WHERE asset_id=?1", [asset.id.as_str()])
+                .map_err(|error| error.to_string())?;
+            connection.execute("DELETE FROM semantic_segments WHERE asset_id=?1", [asset.id.as_str()])
                 .map_err(|error| error.to_string())?;
         }
     }

@@ -36,5 +36,4 @@ Edentic is developed one verified product slice per conversation.
 
 ## Current boundary
 
-Slice 1 includes setup, project home, managed project folders, source import, local Video Map, settings and OpenRouter BYOK foundations. Timeline editing and the Manual/Assisted/Agentic modes are later slices.
-
+Slice 1 is creator-verified. Slice 2 adds local and approved remote semantic source understanding, a persistent project assistant and reviewable structured edit plans. Slice 2 never applies plan decisions to a timeline. Destructive cuts, timeline editing, rendering, voiceover generation, export, full mode switching and autonomous control remain later slices.

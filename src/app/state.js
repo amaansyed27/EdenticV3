@@ -44,6 +44,21 @@ export const state = {
   mediaPanelCollapsed: false,
   videoMapPanelCollapsed: false,
   openrouterModels: [],
+  analysisFrames: [],
+  semanticSegments: [],
+  conversations: [],
+  messages: [],
+  editPlans: [],
+  remoteAnalysisApproved: false,
+  intelligenceView: "source",
+  assistantAssetIds: [],
+  assistantConversationId: "",
+  assistantDraft: "",
+  activePlanId: "",
+  aiJobs: [],
+  remotePreview: null,
+  remoteDisclosureOpen: false,
+  semanticBusy: false,
 };
 
 const subscribers = new Set();
@@ -56,6 +71,23 @@ export function subscribe(listener) {
 export function patchState(patch) {
   Object.assign(state, patch);
   for (const listener of subscribers) listener(state, patch);
+}
+
+export function projectSnapshotPatch(snapshot) {
+  return {
+    activeProject: snapshot.project,
+    assets: snapshot.assets ?? [],
+    scenes: snapshot.scenes ?? [],
+    transcript: snapshot.transcript ?? [],
+    contexts: snapshot.contexts ?? [],
+    analysisFrames: snapshot.analysisFrames ?? [],
+    semanticSegments: snapshot.semanticSegments ?? [],
+    conversations: snapshot.conversations ?? [],
+    messages: snapshot.messages ?? [],
+    editPlans: snapshot.editPlans ?? [],
+    remoteAnalysisApproved: Boolean(snapshot.remoteAnalysisApproved),
+    jobs: snapshot.jobs ?? [],
+  };
 }
 
 export function resolveTheme(theme) {

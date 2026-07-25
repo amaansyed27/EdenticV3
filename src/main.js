@@ -1,4 +1,5 @@
 import { getBootstrap } from "./app/api.js";
+import { installAssistantRuntime } from "./app/assistant-runtime.js";
 import { renderApp, wireEvents } from "./app/render.js";
 import { applyTheme, defaultSettings, patchState, state, subscribe } from "./app/state.js";
 import { applyWorkspaceTransientPatch } from "./app/views/workspace.js";
@@ -23,6 +24,7 @@ subscribe((nextState, patch) => {
 });
 
 installWorkspaceRuntime();
+installAssistantRuntime();
 
 async function boot() {
   applyTheme(defaultSettings.theme);
@@ -54,6 +56,8 @@ window.addEventListener("keydown", (event) => {
       contextDialogOpen: false,
       recoveryDialog: null,
       assetDeleteId: null,
+      remotePreview: null,
+      remoteDisclosureOpen: false,
     });
   }
   if ((event.ctrlKey || event.metaKey) && event.key === ",") {

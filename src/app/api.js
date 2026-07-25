@@ -125,11 +125,46 @@ export async function testOpenRouter() {
 export async function listOpenRouterModels() {
   if (demoMode()) {
     return [
-      { id: "openrouter/free", name: "Free Models Router", contextLength: 200000, isFree: true },
-      { id: "qwen/qwen3.5-9b:free", name: "Qwen 3.5 9B (free)", contextLength: 131072, isFree: true },
+      { id: "openrouter/free", name: "Free Models Router", contextLength: 200000, isFree: true, inputModalities: ["text", "image"], supportedParameters: ["response_format"] },
+      { id: "qwen/qwen3.5-9b:free", name: "Qwen 3.5 9B (free)", contextLength: 131072, isFree: true, inputModalities: ["text"], supportedParameters: ["response_format"] },
     ];
   }
   return invoke("list_openrouter_models");
+}
+
+function desktopOnly() {
+  if (demoMode()) throw new Error("Slice 2 analysis requires the Edentic desktop app.");
+}
+
+export async function buildLocalSemanticMap(projectPath, assetIds) {
+  desktopOnly(); return invoke("build_local_semantic_map", { projectPath, assetIds });
+}
+export async function prepareSemanticAnalysis(projectPath, assetIds) {
+  desktopOnly(); return invoke("prepare_semantic_analysis", { projectPath, assetIds });
+}
+export async function runSemanticAnalysis(projectPath, previewId, approveFirst) {
+  desktopOnly(); return invoke("run_semantic_analysis", { projectPath, previewId, approveFirst });
+}
+export async function prepareAssistantRequest(projectPath, prompt, assetIds, conversationId) {
+  desktopOnly(); return invoke("prepare_assistant_request", { projectPath, prompt, assetIds, conversationId });
+}
+export async function prepareDecisionRegeneration(projectPath, planId, decisionId) {
+  desktopOnly(); return invoke("prepare_decision_regeneration", { projectPath, planId, decisionId });
+}
+export async function startAssistantRequest(projectPath, previewId) {
+  desktopOnly(); return invoke("start_assistant_request", { projectPath, previewId });
+}
+export async function getAiJobs(projectPath) {
+  desktopOnly(); return invoke("get_ai_jobs", { projectPath });
+}
+export async function cancelAiJob(jobId) {
+  desktopOnly(); return invoke("cancel_ai_job", { jobId });
+}
+export async function saveEditPlan(projectPath, plan) {
+  desktopOnly(); return invoke("save_edit_plan", { projectPath, plan });
+}
+export async function setEditPlanStatus(projectPath, planId, status) {
+  desktopOnly(); return invoke("set_edit_plan_status", { projectPath, planId, status });
 }
 
 export async function resetSettings() {

@@ -85,5 +85,11 @@ export const demoProject = {
   contexts: [
     { id: "context-1", name: "Implementation context", source: "pasted", createdAt: now.toISOString(), content: "WinReclaim is a local-first Windows storage intelligence tool." },
   ],
+  analysisFrames: [],
+  semanticSegments: [],
+  conversations: [],
+  messages: [],
+  editPlans: [],
+  remoteAnalysisApproved: false,
   jobs: [],
 };

@@ -34,6 +34,15 @@ pub fn delete_media_asset(
             return Err("Cancel indexing and wait for it to stop before removing this source.".into());
         }
     }
+    {
+        let jobs = state.ai_jobs.lock()
+            .map_err(|_| "Assistant job lock was poisoned".to_string())?;
+        if jobs.values().any(|job| job.project_path == project_path_string
+            && ["queued", "running"].contains(&job.status.as_str()))
+        {
+            return Err("Cancel the active assistant request before removing a source.".into());
+        }
+    }
 
     let asset = storage::find_asset(&project_path, &asset_id)?;
     let scene_thumbnails = storage::list_scenes(&project_path)?
@@ -54,6 +63,10 @@ pub fn delete_media_asset(
     for thumbnail in scene_thumbnails {
         remove_project_file(&project_path, &thumbnail);
     }
+    let analysis_directory = project_path.join("Cache").join("analysis").join(&asset_id);
+    if analysis_directory.is_dir() {
+        let _ = fs::remove_dir_all(analysis_directory);
+    }
 
     let jobs = {
         let mut jobs = state.jobs.lock().map_err(|_| "Job lock was poisoned".to_string())?;
@@ -71,6 +84,12 @@ pub fn delete_media_asset(
         scenes: storage::list_scenes(&project_path)?,
         transcript: storage::list_transcript(&project_path)?,
         contexts: storage::list_contexts(&project_path)?,
+        analysis_frames: crate::slice2_storage::list_analysis_frames(&project_path)?,
+        semantic_segments: crate::slice2_storage::list_semantic_segments(&project_path)?,
+        conversations: crate::slice2_storage::list_conversations(&project_path)?,
+        messages: crate::slice2_storage::list_messages(&project_path)?,
+        edit_plans: crate::slice2_storage::list_plans(&project_path)?,
+        remote_analysis_approved: crate::slice2_storage::remote_analysis_approved(&project_path)?,
         jobs,
     })
 }

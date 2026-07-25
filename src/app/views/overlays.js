@@ -89,7 +89,7 @@ function mediaSettings(state) {
 function providersSettings(state) {
   return `
     <section class="settings-page">
-      <div class="settings-page-heading"><h2>AI providers</h2><p>OpenRouter is the first provider. Editing intelligence arrives in Slice 2.</p></div>
+      <div class="settings-page-heading"><h2>AI providers</h2><p>OpenRouter powers approved semantic analysis and assisted edit planning.</p></div>
       <div class="provider-heading">
         <div class="provider-logo">OR</div>
         <div><h3>OpenRouter</h3><p>Bring your own key. Stored in the Windows credential vault.</p></div>
@@ -103,7 +103,7 @@ function providersSettings(state) {
             <button class="button button-primary" type="button" data-action="save-openrouter-key">Save key</button>
           </div>
         </label>
-        <p class="privacy-note">${icon("info", 15)} Source media never leaves the device during local processing. Future AI requests will show exactly what derived context is being sent.</p>
+        <p class="privacy-note">${icon("info", 15)} Source media stays local. Before every remote request, Edentic shows the exact sampled frames, transcript, Context and instruction that will be sent.</p>
       </div>
       <div class="settings-group">
         <label class="field">

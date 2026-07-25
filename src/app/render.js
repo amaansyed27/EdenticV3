@@ -26,7 +26,7 @@ import {
 } from "./api.js";
 import { escapeHtml, formatDuration } from "./format.js";
 import { icon } from "./icons.js";
-import { applyTheme, notify, patchState, state } from "./state.js";
+import { applyTheme, notify, patchState, projectSnapshotPatch, state } from "./state.js";
 import { renderCreateProject, renderHome, renderOnboarding } from "./views/home.js";
 import { renderContextDialog, renderRecoveryDialog, renderSettings } from "./views/overlays.js";
 import { renderWorkspace } from "./views/workspace.js";
@@ -85,13 +85,11 @@ async function refreshProject() {
   if (!state.activeProject) return;
   const snapshot = await getProjectSnapshot(state.activeProject.path);
   patchState({
-    activeProject: snapshot.project,
-    assets: snapshot.assets,
-    scenes: snapshot.scenes,
-    transcript: snapshot.transcript,
-    contexts: snapshot.contexts,
-    jobs: snapshot.jobs ?? state.jobs,
+    ...projectSnapshotPatch(snapshot),
     selectedAssetId: state.selectedAssetId ?? snapshot.assets[0]?.id ?? null,
+    assistantAssetIds: state.assistantAssetIds.length
+      ? state.assistantAssetIds.filter((id) => snapshot.assets.some((asset) => asset.id === id))
+      : snapshot.assets.map((asset) => asset.id),
   });
 }
 
@@ -122,6 +120,17 @@ function clearedProjectState() {
     scenes: [],
     transcript: [],
     contexts: [],
+    analysisFrames: [],
+    semanticSegments: [],
+    conversations: [],
+    messages: [],
+    editPlans: [],
+    aiJobs: [],
+    assistantAssetIds: [],
+    assistantConversationId: "",
+    activePlanId: "",
+    remotePreview: null,
+    remoteDisclosureOpen: false,
     jobs: [],
     selectedAssetId: null,
     selectedSceneId: null,
@@ -195,9 +204,9 @@ async function handleAction(action, element) {
     patchState({ settingsSection: element.dataset.value, settings: readSettingsForm() });
   }
   if (action === "project-view") patchState({ projectView: element.dataset.value });
-  if (action === "map-tab") patchState({ videoMapTab: element.dataset.value });
+  if (action === "map-tab") patchState({ videoMapTab: element.dataset.value, intelligenceView: "source" });
   if (action === "view-context") {
-    patchState({ videoMapTab: "context", videoMapPanelCollapsed: false });
+    patchState({ videoMapTab: "context", intelligenceView: "source", videoMapPanelCollapsed: false });
   }
   if (action === "add-context") patchState({ contextDialogOpen: true });
   if (action === "close-context-dialog") patchState({ contextDialogOpen: false });
@@ -231,14 +240,10 @@ async function handleAction(action, element) {
     const snapshot = await pickProject();
     if (!snapshot) return;
     patchState({
+      ...projectSnapshotPatch(snapshot),
       screen: "workspace",
-      activeProject: snapshot.project,
-      assets: snapshot.assets,
-      scenes: snapshot.scenes,
-      transcript: snapshot.transcript,
-      contexts: snapshot.contexts,
-      jobs: snapshot.jobs ?? [],
       selectedAssetId: snapshot.assets[0]?.id ?? null,
+      assistantAssetIds: snapshot.assets.map((asset) => asset.id),
     });
     startJobPolling();
   }
@@ -251,15 +256,11 @@ async function handleAction(action, element) {
     patchState({ loading: true });
     const snapshot = await openProject(element.dataset.projectPath);
     patchState({
+      ...projectSnapshotPatch(snapshot),
       loading: false,
       screen: "workspace",
-      activeProject: snapshot.project,
-      assets: snapshot.assets,
-      scenes: snapshot.scenes,
-      transcript: snapshot.transcript,
-      contexts: snapshot.contexts,
-      jobs: snapshot.jobs ?? [],
       selectedAssetId: snapshot.assets[0]?.id ?? null,
+      assistantAssetIds: snapshot.assets.map((asset) => asset.id),
     });
     startJobPolling();
   }
@@ -370,15 +371,12 @@ async function handleSubmit(form) {
     });
     const snapshot = await openProject(project.path);
     patchState({
+      ...projectSnapshotPatch(snapshot),
       createProjectOpen: false,
       screen: "workspace",
-      activeProject: snapshot.project,
-      assets: snapshot.assets,
-      scenes: snapshot.scenes,
-      transcript: snapshot.transcript,
-      contexts: snapshot.contexts,
       jobs: [],
       selectedAssetId: null,
+      assistantAssetIds: [],
     });
     startJobPolling();
   }

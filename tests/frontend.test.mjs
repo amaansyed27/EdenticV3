@@ -35,6 +35,7 @@ test("the working editor avoids gradient styling", async () => {
     "branding.css",
     "logo-motion.css",
     "theme-adaptive.css",
+    "slice2.css",
   ].map((file) => readFile(new URL(`../src/styles/${file}`, import.meta.url), "utf8")));
   assert.doesNotMatch(styles.join("\n"), /linear-gradient|radial-gradient|repeating-linear-gradient/);
 });
@@ -44,11 +45,12 @@ test("all visible workspace and settings actions are wired", async () => {
     "workspace.js",
     "overlays.js",
   ].map((file) => readFile(new URL(`../src/app/views/${file}`, import.meta.url), "utf8")));
-  const [renderer, workspaceRuntime] = await Promise.all([
+  const [renderer, workspaceRuntime, assistantRuntime] = await Promise.all([
     readFile(new URL("../src/app/render.js", import.meta.url), "utf8"),
     readFile(new URL("../src/app/workspace-runtime.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/app/assistant-runtime.js", import.meta.url), "utf8"),
   ]);
-  const controllers = `${renderer}\n${workspaceRuntime}`;
+  const controllers = `${renderer}\n${workspaceRuntime}\n${assistantRuntime}`;
   const actions = [...views.join("\n").matchAll(/data-action="([a-z][a-z0-9-]+)"/g)].map((match) => match[1]);
   for (const action of new Set(actions)) {
     assert.match(controllers, new RegExp(`action === "${action}"|"${action}"`), `Missing action handler for ${action}`);

@@ -148,6 +148,12 @@ fn snapshot(project_path: &Path, state: &RuntimeState) -> Result<ProjectSnapshot
         scenes: storage::list_scenes(project_path)?,
         transcript: storage::list_transcript(project_path)?,
         contexts: storage::list_contexts(project_path)?,
+        analysis_frames: crate::slice2_storage::list_analysis_frames(project_path)?,
+        semantic_segments: crate::slice2_storage::list_semantic_segments(project_path)?,
+        conversations: crate::slice2_storage::list_conversations(project_path)?,
+        messages: crate::slice2_storage::list_messages(project_path)?,
+        edit_plans: crate::slice2_storage::list_plans(project_path)?,
+        remote_analysis_approved: crate::slice2_storage::remote_analysis_approved(project_path)?,
         jobs,
     })
 }

@@ -1,74 +1,39 @@
-# Slice 1 architecture
+# Slice 2 architecture
 
 ## Product flow
 
 ```text
-First launch
-  -> choose managed projects folder
-  -> project home
-  -> create/open project
-  -> import source media
-  -> automatic local index job
-  -> searchable Video Map
+Managed source import
+  -> local Video/Audio Map
+  -> scene-aware frame sampling and visual deduplication
+  -> local semantic map
+  -> exact remote disclosure and first-analysis approval
+  -> validated remote semantic map
+  -> persistent project assistant
+  -> strict, reviewable edit plan
 ```
 
 ## Ownership
 
-```text
-Frontend
-  src/app/api.js              typed native boundary and browser demo boundary
-  src/app/state.js            session-only UI state
-  src/app/render.js           action wiring and native workflow coordination
-  src/app/views               home, workspace and settings views
-  src/styles                  tokens and screen-specific styling
+- `src/app/assistant-runtime.js`: semantic, assistant and plan workflow coordination.
+- `src/app/views/intelligence.js`: Source/Assistant/Plan and disclosure views.
+- `src-tauri/src/semantic.rs`: local sampling, deduplication, disclosure and semantic validation.
+- `src-tauri/src/assistant.rs`: streamed assistant requests and structured plan validation.
+- `src-tauri/src/slice2_storage.rs`: semantic, disclosure, conversation and plan persistence.
+- `src-tauri/src/openrouter.rs`: credential vault, model capability checks and streamed structured output.
 
-Native Rust
-  commands.rs                 thin Tauri commands and job coordination
-  storage.rs                  global settings, manifests and SQLite storage
-  media.rs                    probing, managed imports and local indexing
-  openrouter.rs               credential-vault access and provider API
-  models.rs                   serialized contracts shared with the frontend
+## Project data
 
-Local transcription
-  python/transcribe.py        JSON-only Faster-Whisper subprocess
-```
+`Cache\analysis\<asset-id>` contains rebuildable representative JPEGs. SQLite owns sampled-frame metadata, semantic segments, immutable request previews, first-analysis approval, assistant conversations/messages and edit plans.
 
-## Project layout
+Semantic segments store source asset, range, title, description, transcript excerpt, visual observations, importance, keep/remove/shorten suggestion, confidence and local/both provenance.
 
-```text
-Project Name/
-  Media/
-    Originals/
-    Audio/
-    Images/
-    Generated/
-  Edit/
-    project.edentic
-    project.sqlite
-    index-data/
-  Autosaves/
-  Proxies/
-  Cache/
-    posters/
-    waveforms/
-    scenes/
-  Backups/
-```
+## Remote boundary
 
-Originals are managed copies and are never modified by processing. Posters, waveforms, scene thumbnails and proxies are derived artifacts. The authoritative Slice 1 project state is the manifest plus SQLite database.
+Edentic never sends the entire source video. Before every request, it persists and displays the exact selected-source metadata, JPEG frames and timestamps, semantic map, transcript, Context and instruction. The first remote semantic analysis needs additional explicit project approval.
 
-## Processing modes
+OpenRouter model metadata is checked for image and structured-output support. `openrouter/free` uses provider-side required-parameter routing. Responses use strict JSON Schema and are validated again in Rust for unknown fields, enums, source IDs, timestamp bounds and confidence.
 
-- `auto`: use CUDA for transcription/proxies when available, otherwise CPU.
-- `gpu`: prioritize CUDA/NVENC; proxy rendering can fall back to CPU if the installed FFmpeg lacks NVENC.
-- `hybrid`: GPU transcription/proxies plus CPU scene/audio/index work.
-- `cpu`: do not initialize CUDA processing.
+## Plan-only boundary
 
-The UI reports detected hardware separately from the configured preference.
-
-## Provider boundary
-
-OpenRouter is configuration-only during Slice 1. The API key is stored using the operating-system credential vault. Key validation uses OpenRouter's authenticated `GET /api/v1/key` endpoint, and the model catalogue uses `GET /api/v1/models`.
-
-No source video or project context is sent to OpenRouter in Slice 1.
-
+Assistant requests show live streamed progress and support cancellation and retry. Plans can be played, toggled, timestamp-edited, reordered, selectively regenerated, accepted or rejected. These actions only persist planning state; Slice 2 has no timeline mutation, rendering or export path.

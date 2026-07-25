@@ -1,6 +1,9 @@
 import { toAssetUrl } from "../api.js";
 import { escapeHtml, fileName, formatBytes, formatDuration } from "../format.js";
 import { icon } from "../icons.js";
+import {
+  intelligenceNav, renderAssistantPanel, renderPlanPanel, renderRemoteDisclosure,
+} from "./intelligence.js";
 
 const imageExtensions = new Set(["png", "jpg", "jpeg", "webp", "gif", "bmp", "tif", "tiff", "avif"]);
 const audioExtensions = new Set(["wav", "mp3", "m4a", "aac", "flac", "ogg", "opus", "wma", "aiff", "aif"]);
@@ -155,6 +158,25 @@ function contextsPanel(contexts) {
     </div>`;
 }
 
+function semanticPanel(state, selectedAsset) {
+  const segments = state.semanticSegments.filter((value) => !selectedAsset || value.assetId === selectedAsset.id);
+  if (!segments.length) return `<div class="map-empty semantic-empty">
+    ${icon("note", 25)}<h3>No semantic map yet</h3>
+    <p>Build a useful local map first, or preview the exact derived data before remote analysis.</p>
+    <div><button class="button button-quiet" type="button" data-action="build-local-semantics" ${state.semanticBusy ? "disabled" : ""}>${state.semanticBusy ? "Building…" : "Build locally"}</button>
+    <button class="button button-primary" type="button" data-action="prepare-semantic-analysis" ${state.semanticBusy ? "disabled" : ""}>Preview remote analysis</button></div>
+  </div>`;
+  return `<div class="semantic-list"><div class="semantic-actions"><span>${segments.length} persisted segments</span>
+    <button class="text-button" type="button" data-action="prepare-semantic-analysis" ${state.semanticBusy ? "disabled" : ""}>${icon("refresh", 14)} ${state.semanticBusy ? "Preparing…" : "Analyze remotely"}</button></div>
+    ${segments.map((segment) => `<button class="semantic-row" type="button" data-action="seek-video" data-time="${segment.start}">
+      <span><strong>${escapeHtml(segment.title)}</strong><small>${escapeHtml(segment.provenance)}</small></span>
+      <time>${formatDuration(segment.start)}–${formatDuration(segment.end)}</time>
+      <p>${escapeHtml(segment.description)}</p>
+      ${segment.visualObservations?.length ? `<ul>${segment.visualObservations.map((value) => `<li>${escapeHtml(value)}</li>`).join("")}</ul>` : ""}
+      <span class="semantic-row-footer"><b>${escapeHtml(segment.importance)}</b><b>${escapeHtml(segment.suggestedDecision)}</b><small>${Math.round(segment.confidence * 100)}%</small></span>
+    </button>`).join("")}</div>`;
+}
+
 function activeJob(jobs) {
   return jobs.find((job) => ["queued", "running"].includes(job.status));
 }
@@ -292,19 +314,20 @@ export function renderWorkspace(state) {
         <button class="text-button" type="button" data-action="import-media">Import</button>
       </div>`;
 
-  const mapPanel = state.videoMapPanelCollapsed
-    ? collapsedRail("toggle-video-map-panel", processing.icon, processing.title, "right")
-    : `
+  const semanticCount = state.semanticSegments.filter((value) => !selectedAsset || value.assetId === selectedAsset.id).length;
+  const sourcePanel = `
       <div class="panel-header map-header">
-        <div><p class="panel-kicker">LOCAL SOURCE DATA</p><h2>${processing.title}</h2></div>
+        <div><p class="panel-kicker">SOURCE UNDERSTANDING</p><h2>${processing.title}</h2></div>
         <div class="panel-header-actions">
-          <span class="local-badge">LOCAL</span>
+          <span class="local-badge">${semanticCount ? "SEMANTIC" : "LOCAL"}</span>
           <button class="icon-button panel-collapse-button" type="button" data-action="toggle-video-map-panel" aria-label="Collapse Video Map panel">${icon("chevronRight", 18)}</button>
         </div>
       </div>
+      ${intelligenceNav(state)}
       <div class="map-tabs" role="tablist">
         <button type="button" role="tab" data-action="map-tab" data-value="scenes" class="${state.videoMapTab === "scenes" ? "active" : ""}">${processing.firstTab} <span>${scenes.length}</span></button>
         <button type="button" role="tab" data-action="map-tab" data-value="transcript" class="${state.videoMapTab === "transcript" ? "active" : ""}">Transcript <span>${transcript.length}</span></button>
+        <button type="button" role="tab" data-action="map-tab" data-value="semantic" class="${state.videoMapTab === "semantic" ? "active" : ""}">Semantic <span>${semanticCount}</span></button>
         <button type="button" role="tab" data-action="map-tab" data-value="context" class="${state.videoMapTab === "context" ? "active" : ""}">Context <span>${state.contexts.length}</span></button>
       </div>
       ${state.videoMapTab === "transcript"
@@ -315,11 +338,20 @@ export function renderWorkspace(state) {
           ? scenesPanel(state, scenes, selectedKind)
           : state.videoMapTab === "transcript"
             ? transcriptPanel(transcript, state.videoMapQuery, selectedKind)
-            : contextsPanel(state.contexts)}
+            : state.videoMapTab === "semantic"
+              ? semanticPanel(state, selectedAsset)
+              : contextsPanel(state.contexts)}
       </div>
       <div class="map-footer">
-        <span>${icon("clock", 14)} ${selectedAsset?.indexStatus === "ready" ? processing.ready : selectedAsset?.indexStatus === "partial" ? processing.partial : processing.waiting}</span>
+        <span>${icon("clock", 14)} ${semanticCount ? `${semanticCount} semantic segments persisted` : selectedAsset?.indexStatus === "ready" ? processing.ready : selectedAsset?.indexStatus === "partial" ? processing.partial : processing.waiting}</span>
       </div>`;
+  const mapPanel = state.videoMapPanelCollapsed
+    ? collapsedRail("toggle-video-map-panel", "note", "Project intelligence", "right")
+    : state.intelligenceView === "assistant"
+      ? renderAssistantPanel(state)
+      : state.intelligenceView === "plan"
+        ? renderPlanPanel(state)
+        : sourcePanel;
 
   return `
     <main class="workspace-shell">
@@ -333,11 +365,12 @@ export function renderWorkspace(state) {
           </div>
         </div>
         <div class="workspace-stage">
-          <span class="stage-badge">${processing.shortTitle}</span>
-          <span>Slice 1 workspace</span>
+          <span class="stage-badge">ASSISTED PLANNING</span>
+          <span>Slice 2 workspace</span>
         </div>
         <div class="editor-header-actions">
           <button class="button button-quiet" type="button" data-action="view-context">${icon("note", 16)} Project context${state.contexts.length ? ` · ${state.contexts.length}` : ""}</button>
+          <button class="button button-primary" type="button" data-action="intelligence-view" data-value="assistant">${icon("note", 16)} Assistant</button>
           <button class="icon-button" type="button" data-action="open-settings" aria-label="Settings">${icon("gear", 18)}</button>
         </div>
       </header>
@@ -413,5 +446,6 @@ export function renderWorkspace(state) {
       </div>
       <div id="job-strip-host" class="job-strip-host">${jobStrip(state.jobs)}</div>
     </main>
-    ${deleteAssetDialog(state)}`;
+    ${deleteAssetDialog(state)}
+    ${renderRemoteDisclosure(state)}`;
 }

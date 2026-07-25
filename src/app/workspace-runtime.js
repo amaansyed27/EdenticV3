@@ -1,5 +1,5 @@
 import { deleteMediaAsset } from "./api.js";
-import { notify, patchState, state } from "./state.js";
+import { notify, patchState, projectSnapshotPatch, state } from "./state.js";
 
 let activeScrubber = null;
 let activePointerId = null;
@@ -158,12 +158,8 @@ async function handleWorkspaceAction(action, element) {
     const assetId = element.dataset.assetId;
     const snapshot = await deleteMediaAsset(state.activeProject.path, assetId);
     patchState({
-      activeProject: snapshot.project,
-      assets: snapshot.assets,
-      scenes: snapshot.scenes,
-      transcript: snapshot.transcript,
-      contexts: snapshot.contexts,
-      jobs: snapshot.jobs ?? [],
+      ...projectSnapshotPatch(snapshot),
+      assistantAssetIds: state.assistantAssetIds.filter((id) => id !== assetId),
       selectedAssetId: snapshot.assets[0]?.id ?? null,
       selectedSceneId: null,
       assetDeleteId: null,
