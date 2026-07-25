@@ -1,4 +1,5 @@
 use crate::{
+    media::{self, MediaKind},
     models::{AppSettings, IndexJob, MediaAsset, Scene, TranscriptSegment},
     storage,
     RuntimeState,
@@ -316,6 +317,57 @@ where
     F: FnMut(f64, &str) -> bool,
 {
     let mut warnings = Vec::new();
+    let kind = media::media_kind(Path::new(&asset.managed_path));
+
+    if kind == MediaKind::Image {
+        if !progress(0.35, "Preparing image preview") {
+            return Err("Indexing cancelled".into());
+        }
+        match create_poster(&asset, project_path) {
+            Ok(path) => asset.poster_path = path.to_string_lossy().into_owned(),
+            Err(error) => warnings.push(error),
+        }
+        let scenes = vec![Scene {
+            id: Uuid::new_v4().to_string(),
+            asset_id: asset.id.clone(),
+            start: 0.0,
+            end: 0.0,
+            label: "Still image".into(),
+            thumbnail_path: asset.poster_path.clone(),
+        }];
+        if !progress(0.94, "Saving image map") {
+            return Err("Indexing cancelled".into());
+        }
+        let status = if warnings.is_empty() { "ready" } else { "partial" };
+        storage::replace_index(project_path, &asset, &scenes, &[], status)?;
+        return Ok((!warnings.is_empty()).then(|| warnings.join(" · ")));
+    }
+
+    if kind == MediaKind::Audio {
+        if !progress(0.35, "Rendering audio waveform") {
+            return Err("Indexing cancelled".into());
+        }
+        match create_waveform(&asset, project_path) {
+            Ok(path) => asset.waveform_path = path.to_string_lossy().into_owned(),
+            Err(error) => warnings.push(error),
+        }
+        if !progress(0.72, "Transcribing audio locally") {
+            return Err("Indexing cancelled".into());
+        }
+        let transcript = match transcribe(&asset, settings) {
+            Ok(transcript) => transcript,
+            Err(error) => {
+                warnings.push(format!("Transcript unavailable: {error}"));
+                Vec::new()
+            }
+        };
+        if !progress(0.94, "Saving audio map") {
+            return Err("Indexing cancelled".into());
+        }
+        let status = if warnings.is_empty() { "ready" } else { "partial" };
+        storage::replace_index(project_path, &asset, &[], &transcript, status)?;
+        return Ok((!warnings.is_empty()).then(|| warnings.join(" · ")));
+    }
 
     if !progress(0.08, "Creating source poster") {
         return Err("Indexing cancelled".into());
