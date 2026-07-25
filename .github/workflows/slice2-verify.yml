@@ -1,0 +1,31 @@
+name: Slice 2 verification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-native:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Frontend tests
+        run: npm test
+      - name: Frontend production build
+        run: npm run build:frontend
+      - name: Rust tests
+        run: cargo test --manifest-path .\\src-tauri\\Cargo.toml --locked
+      - name: Rust formatting
+        run: cargo fmt --manifest-path .\\src-tauri\\Cargo.toml -- --check
