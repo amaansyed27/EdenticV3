@@ -19,7 +19,15 @@ pub fn save_key(api_key: &str) -> NativeResult<()> {
     if !api_key.starts_with("sk-or-") {
         return Err("This does not look like an OpenRouter API key".into());
     }
-    entry()?.set_password(api_key).map_err(|error| error.to_string())
+    entry()?
+        .set_password(api_key)
+        .map_err(|error| format!("Windows Credential Manager could not store the key: {error}"))?;
+    let restored = read_key()
+        .map_err(|error| format!("The key was written but could not be read back: {error}"))?;
+    if restored != api_key {
+        return Err("Windows Credential Manager returned a different credential after saving".into());
+    }
+    Ok(())
 }
 
 pub fn read_key() -> NativeResult<String> {
