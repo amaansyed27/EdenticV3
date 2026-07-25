@@ -191,6 +191,9 @@ async function handleAction(action, element) {
   }
   if (action === "project-view") patchState({ projectView: element.dataset.value });
   if (action === "map-tab") patchState({ videoMapTab: element.dataset.value });
+  if (action === "view-context") {
+    patchState({ videoMapTab: "context", videoMapPanelCollapsed: false });
+  }
   if (action === "add-context") patchState({ contextDialogOpen: true });
   if (action === "close-context-dialog") patchState({ contextDialogOpen: false });
   if (action === "request-recovery") patchState({ recoveryDialog: element.dataset.value });
@@ -332,8 +335,12 @@ async function handleAction(action, element) {
     const context = await importContext(state.activeProject.path);
     if (context) {
       await refreshProject();
-      patchState({ contextDialogOpen: false });
-      notify("Context saved to the project", "success");
+      patchState({
+        contextDialogOpen: false,
+        videoMapTab: "context",
+        videoMapPanelCollapsed: false,
+      });
+      notify("Context saved · shown in the Context tab", "success");
     }
   }
 }
@@ -381,8 +388,12 @@ async function handleSubmit(form) {
       data.get("content").trim(),
     );
     await refreshProject();
-    patchState({ contextDialogOpen: false });
-    notify("Context saved to the project", "success");
+    patchState({
+      contextDialogOpen: false,
+      videoMapTab: "context",
+      videoMapPanelCollapsed: false,
+    });
+    notify("Context saved · shown in the Context tab", "success");
   }
 }
 
