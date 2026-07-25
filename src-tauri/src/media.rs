@@ -461,3 +461,18 @@ where
         warning,
     })
 }
+
+
+#[cfg(test)]
+mod source_type_tests {
+    use super::*;
+
+    #[test]
+    fn classifies_common_managed_media_types() {
+        assert_eq!(media_kind(Path::new("clip.mkv")), MediaKind::Video);
+        assert_eq!(media_kind(Path::new("voice.flac")), MediaKind::Audio);
+        assert_eq!(media_kind(Path::new("frame.webp")), MediaKind::Image);
+        assert_eq!(managed_media_directory(Path::new("voice.mp3")), "Media/Audio");
+        assert_eq!(managed_media_directory(Path::new("frame.png")), "Media/Images");
+    }
+}
