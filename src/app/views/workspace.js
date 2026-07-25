@@ -19,7 +19,7 @@ function assetDetails(asset, kind) {
 
 function assetItem(asset, selected) {
   const kind = assetKind(asset);
-  const preview = toAssetUrl(kind === "image" ? asset.managedPath : asset.posterPath);
+  const preview = toAssetUrl(kind === "image" ? asset.posterPath || asset.managedPath : asset.posterPath);
   return `
     <button class="asset-item ${selected ? "selected" : ""}" type="button" data-action="select-asset" data-asset-id="${asset.id}">
       <span class="asset-thumb ${kind}">
@@ -197,7 +197,11 @@ export function renderWorkspace(state) {
     : null;
   const selectedKind = selectedAsset ? assetKind(selectedAsset) : null;
   const isTemporal = selectedKind === "video" || selectedKind === "audio";
-  const mediaUrl = selectedAsset ? toAssetUrl(selectedAsset.proxyPath || selectedAsset.managedPath) : "";
+  const mediaUrl = selectedAsset
+    ? toAssetUrl(selectedKind === "image"
+      ? selectedAsset.posterPath || selectedAsset.managedPath
+      : selectedAsset.proxyPath || selectedAsset.managedPath)
+    : "";
   const waveformUrl = selectedAsset ? toAssetUrl(selectedAsset.waveformPath) : "";
   const gridClasses = [
     "editor-grid",
