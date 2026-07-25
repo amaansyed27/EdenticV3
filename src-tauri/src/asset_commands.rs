@@ -24,22 +24,30 @@ pub fn delete_media_asset(
     let project_path = PathBuf::from(project_path);
     let project_path_string = project_path.to_string_lossy().into_owned();
     {
-        let jobs = state.jobs.lock().map_err(|_| "Job lock was poisoned".to_string())?;
+        let jobs = state
+            .jobs
+            .lock()
+            .map_err(|_| "Job lock was poisoned".to_string())?;
         let busy = jobs.values().any(|job| {
             job.project_path == project_path_string
                 && job.asset_id == asset_id
                 && ["queued", "running"].contains(&job.status.as_str())
         });
         if busy {
-            return Err("Cancel indexing and wait for it to stop before removing this source.".into());
+            return Err(
+                "Cancel indexing and wait for it to stop before removing this source.".into(),
+            );
         }
     }
     {
-        let jobs = state.ai_jobs.lock()
+        let jobs = state
+            .ai_jobs
+            .lock()
             .map_err(|_| "Assistant job lock was poisoned".to_string())?;
-        if jobs.values().any(|job| job.project_path == project_path_string
-            && ["queued", "running"].contains(&job.status.as_str()))
-        {
+        if jobs.values().any(|job| {
+            job.project_path == project_path_string
+                && ["queued", "running"].contains(&job.status.as_str())
+        }) {
             return Err("Cancel the active assistant request before removing a source.".into());
         }
     }
@@ -69,8 +77,13 @@ pub fn delete_media_asset(
     }
 
     let jobs = {
-        let mut jobs = state.jobs.lock().map_err(|_| "Job lock was poisoned".to_string())?;
-        jobs.retain(|_, job| !(job.project_path == project_path_string && job.asset_id == asset_id));
+        let mut jobs = state
+            .jobs
+            .lock()
+            .map_err(|_| "Job lock was poisoned".to_string())?;
+        jobs.retain(|_, job| {
+            !(job.project_path == project_path_string && job.asset_id == asset_id)
+        });
         jobs.values()
             .filter(|job| job.project_path == project_path_string)
             .cloned()

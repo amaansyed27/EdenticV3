@@ -64,7 +64,12 @@ pub struct ProjectManifest {
 }
 
 impl ProjectManifest {
-    pub fn summary(&self, path: &std::path::Path, asset_count: usize, thumbnail: String) -> ProjectSummary {
+    pub fn summary(
+        &self,
+        path: &std::path::Path,
+        asset_count: usize,
+        thumbnail: String,
+    ) -> ProjectSummary {
         ProjectSummary {
             id: self.id.clone(),
             name: self.name.clone(),

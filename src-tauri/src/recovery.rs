@@ -42,7 +42,9 @@ fn stop_jobs(state: &RuntimeState) -> Result<(), String> {
         }
     }
     jobs.clear();
-    let mut ai_jobs = state.ai_jobs.lock()
+    let mut ai_jobs = state
+        .ai_jobs
+        .lock()
         .map_err(|_| "Assistant job lock was poisoned".to_string())?;
     for job in ai_jobs.values_mut() {
         if ["queued", "running"].contains(&job.status.as_str()) {
@@ -137,8 +139,16 @@ fn repair_project(project_path: &Path) -> Result<(), String> {
         let waveform_missing = missing_path(&asset.waveform_path);
         let derived_missing = proxy_missing || poster_missing || waveform_missing;
         let proxy_path = if proxy_missing { "" } else { &asset.proxy_path };
-        let poster_path = if poster_missing { "" } else { &asset.poster_path };
-        let waveform_path = if waveform_missing { "" } else { &asset.waveform_path };
+        let poster_path = if poster_missing {
+            ""
+        } else {
+            &asset.poster_path
+        };
+        let waveform_path = if waveform_missing {
+            ""
+        } else {
+            &asset.waveform_path
+        };
         let status = if source_missing {
             "missing"
         } else if derived_missing {
@@ -158,18 +168,35 @@ fn repair_project(project_path: &Path) -> Result<(), String> {
                 .execute("DELETE FROM scenes WHERE asset_id=?1", [asset.id.as_str()])
                 .map_err(|error| error.to_string())?;
             connection
-                .execute("DELETE FROM transcript WHERE asset_id=?1", [asset.id.as_str()])
+                .execute(
+                    "DELETE FROM transcript WHERE asset_id=?1",
+                    [asset.id.as_str()],
+                )
                 .map_err(|error| error.to_string())?;
-            connection.execute("DELETE FROM analysis_frames WHERE asset_id=?1", [asset.id.as_str()])
+            connection
+                .execute(
+                    "DELETE FROM analysis_frames WHERE asset_id=?1",
+                    [asset.id.as_str()],
+                )
                 .map_err(|error| error.to_string())?;
-            connection.execute("DELETE FROM semantic_segments WHERE asset_id=?1", [asset.id.as_str()])
+            connection
+                .execute(
+                    "DELETE FROM semantic_segments WHERE asset_id=?1",
+                    [asset.id.as_str()],
+                )
                 .map_err(|error| error.to_string())?;
         }
     }
     Ok(())
 }
 
-fn report(message: String, projects: usize, files: usize, bytes: u64, warnings: Vec<String>) -> Value {
+fn report(
+    message: String,
+    projects: usize,
+    files: usize,
+    bytes: u64,
+    warnings: Vec<String>,
+) -> Value {
     json!({
         "message": message,
         "projects": projects,

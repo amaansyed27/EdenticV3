@@ -99,7 +99,11 @@ fn python_version() -> String {
         .ok()
         .filter(|output| output.status.success())
         .and_then(|output| {
-            let value = if output.stdout.is_empty() { output.stderr } else { output.stdout };
+            let value = if output.stdout.is_empty() {
+                output.stderr
+            } else {
+                output.stdout
+            };
             String::from_utf8(value).ok()
         })
         .map(|output| output.trim().to_string())
@@ -131,12 +135,26 @@ pub fn hardware_diagnostics() -> HardwareDiagnostics {
 fn parse_rate(value: Option<&str>) -> f64 {
     let Some(value) = value else { return 0.0 };
     let mut pieces = value.split('/');
-    let numerator = pieces.next().and_then(|part| part.parse::<f64>().ok()).unwrap_or(0.0);
-    let denominator = pieces.next().and_then(|part| part.parse::<f64>().ok()).unwrap_or(1.0);
-    if denominator == 0.0 { 0.0 } else { numerator / denominator }
+    let numerator = pieces
+        .next()
+        .and_then(|part| part.parse::<f64>().ok())
+        .unwrap_or(0.0);
+    let denominator = pieces
+        .next()
+        .and_then(|part| part.parse::<f64>().ok())
+        .unwrap_or(1.0);
+    if denominator == 0.0 {
+        0.0
+    } else {
+        numerator / denominator
+    }
 }
 
-pub fn probe_media(path: &Path, project_id: &str, original_path: &Path) -> NativeResult<MediaAsset> {
+pub fn probe_media(
+    path: &Path,
+    project_id: &str,
+    original_path: &Path,
+) -> NativeResult<MediaAsset> {
     let output = Command::new("ffprobe")
         .args([
             "-v",
@@ -148,7 +166,9 @@ pub fn probe_media(path: &Path, project_id: &str, original_path: &Path) -> Nativ
         ])
         .arg(path)
         .output()
-        .map_err(|_| "ffprobe was not found. Install a current FFmpeg build and restart Edentic.".to_string())?;
+        .map_err(|_| {
+            "ffprobe was not found. Install a current FFmpeg build and restart Edentic.".to_string()
+        })?;
     if !output.status.success() {
         return Err(format!(
             "ffprobe could not read {}: {}",
@@ -156,12 +176,20 @@ pub fn probe_media(path: &Path, project_id: &str, original_path: &Path) -> Nativ
             String::from_utf8_lossy(&output.stderr).trim()
         ));
     }
-    let payload: ProbePayload =
-        serde_json::from_slice(&output.stdout).map_err(|error| format!("Invalid ffprobe response: {error}"))?;
-    let video = payload.streams.iter().find(|stream| stream.codec_type.as_deref() == Some("video"));
-    let audio = payload.streams.iter().find(|stream| stream.codec_type.as_deref() == Some("audio"));
+    let payload: ProbePayload = serde_json::from_slice(&output.stdout)
+        .map_err(|error| format!("Invalid ffprobe response: {error}"))?;
+    let video = payload
+        .streams
+        .iter()
+        .find(|stream| stream.codec_type.as_deref() == Some("video"));
+    let audio = payload
+        .streams
+        .iter()
+        .find(|stream| stream.codec_type.as_deref() == Some("audio"));
     if video.is_none() && audio.is_none() {
-        return Err("The selected file does not contain supported video, audio or image media".into());
+        return Err(
+            "The selected file does not contain supported video, audio or image media".into(),
+        );
     }
     let duration = payload
         .format
@@ -175,7 +203,11 @@ pub fn probe_media(path: &Path, project_id: &str, original_path: &Path) -> Nativ
     Ok(MediaAsset {
         id: Uuid::new_v4().to_string(),
         project_id: project_id.to_string(),
-        name: path.file_name().unwrap_or_default().to_string_lossy().into_owned(),
+        name: path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .into_owned(),
         original_path: original_path.to_string_lossy().into_owned(),
         managed_path: path.to_string_lossy().into_owned(),
         duration,
@@ -203,7 +235,9 @@ pub fn unique_destination(directory: &Path, file_name: &str) -> PathBuf {
     }
     let source = Path::new(file_name);
     let stem = source.file_stem().unwrap_or_default().to_string_lossy();
-    let extension = source.extension().map(|value| value.to_string_lossy().into_owned());
+    let extension = source
+        .extension()
+        .map(|value| value.to_string_lossy().into_owned());
     for index in 2..10_000 {
         let candidate_name = match &extension {
             Some(extension) => format!("{stem} ({index}).{extension}"),
@@ -218,7 +252,9 @@ pub fn unique_destination(directory: &Path, file_name: &str) -> PathBuf {
 }
 
 fn create_poster(asset: &MediaAsset, project_path: &Path) -> NativeResult<PathBuf> {
-    let output = project_path.join("Cache/posters").join(format!("{}.jpg", asset.id));
+    let output = project_path
+        .join("Cache/posters")
+        .join(format!("{}.jpg", asset.id));
     let seek = if asset.duration > 4.0 { "2" } else { "0" };
     let result = Command::new("ffmpeg")
         .args(["-y", "-ss", seek, "-i"])
@@ -228,13 +264,18 @@ fn create_poster(asset: &MediaAsset, project_path: &Path) -> NativeResult<PathBu
         .output()
         .map_err(|_| "ffmpeg was not found".to_string())?;
     if !result.status.success() {
-        return Err(format!("Poster generation failed: {}", String::from_utf8_lossy(&result.stderr)));
+        return Err(format!(
+            "Poster generation failed: {}",
+            String::from_utf8_lossy(&result.stderr)
+        ));
     }
     Ok(output)
 }
 
 fn create_waveform(asset: &MediaAsset, project_path: &Path) -> NativeResult<PathBuf> {
-    let output = project_path.join("Cache/waveforms").join(format!("{}.png", asset.id));
+    let output = project_path
+        .join("Cache/waveforms")
+        .join(format!("{}.png", asset.id));
     let result = Command::new("ffmpeg")
         .args(["-y", "-i"])
         .arg(&asset.managed_path)
@@ -253,25 +294,34 @@ fn create_waveform(asset: &MediaAsset, project_path: &Path) -> NativeResult<Path
     Ok(output)
 }
 
-fn create_proxy(asset: &MediaAsset, project_path: &Path, settings: &AppSettings) -> NativeResult<Option<PathBuf>> {
+fn create_proxy(
+    asset: &MediaAsset,
+    project_path: &Path,
+    settings: &AppSettings,
+) -> NativeResult<Option<PathBuf>> {
     let target_width = match settings.proxy_quality.as_str() {
         "performance" => 960,
         "quality" => 1920,
         _ => 1280,
     };
-    let needs_proxy = asset.width > target_width || !["h264", "hevc", "vp9"].contains(&asset.video_codec.as_str());
+    let needs_proxy = asset.width > target_width
+        || !["h264", "hevc", "vp9"].contains(&asset.video_codec.as_str());
     if !needs_proxy {
         return Ok(None);
     }
-    let output = project_path.join("Proxies").join(format!("{}.mp4", asset.id));
-    let use_gpu = settings.compute_mode != "cpu"
-        && Command::new("nvidia-smi").arg("-L").output().is_ok();
+    let output = project_path
+        .join("Proxies")
+        .join(format!("{}.mp4", asset.id));
+    let use_gpu =
+        settings.compute_mode != "cpu" && Command::new("nvidia-smi").arg("-L").output().is_ok();
     let run = |encoder: &str| {
         let mut command = Command::new("ffmpeg");
-        command
-            .args(["-y", "-i"])
-            .arg(&asset.managed_path)
-            .args(["-vf", &format!("scale={target_width}:-2"), "-c:v", encoder]);
+        command.args(["-y", "-i"]).arg(&asset.managed_path).args([
+            "-vf",
+            &format!("scale={target_width}:-2"),
+            "-c:v",
+            encoder,
+        ]);
         if encoder == "h264_nvenc" {
             command.args(["-preset", "p4", "-cq", "24"]);
         } else {
@@ -282,13 +332,20 @@ fn create_proxy(asset: &MediaAsset, project_path: &Path, settings: &AppSettings)
             .arg(&output)
             .output()
     };
-    let mut result = if use_gpu { run("h264_nvenc") } else { run("libx264") }
-        .map_err(|_| "ffmpeg was not found".to_string())?;
+    let mut result = if use_gpu {
+        run("h264_nvenc")
+    } else {
+        run("libx264")
+    }
+    .map_err(|_| "ffmpeg was not found".to_string())?;
     if !result.status.success() && use_gpu {
         result = run("libx264").map_err(|_| "ffmpeg was not found".to_string())?;
     }
     if !result.status.success() {
-        return Err(format!("Proxy generation failed: {}", String::from_utf8_lossy(&result.stderr)));
+        return Err(format!(
+            "Proxy generation failed: {}",
+            String::from_utf8_lossy(&result.stderr)
+        ));
     }
     Ok(Some(output))
 }
@@ -297,7 +354,14 @@ fn scene_boundaries(asset: &MediaAsset) -> (Vec<f64>, bool) {
     let output = Command::new("ffmpeg")
         .args(["-hide_banner", "-i"])
         .arg(&asset.managed_path)
-        .args(["-vf", "select=gt(scene\\,0.32),showinfo", "-an", "-f", "null", "-"])
+        .args([
+            "-vf",
+            "select=gt(scene\\,0.32),showinfo",
+            "-an",
+            "-f",
+            "null",
+            "-",
+        ])
         .output();
     let Ok(output) = output else {
         return (vec![0.0], false);
@@ -305,13 +369,18 @@ fn scene_boundaries(asset: &MediaAsset) -> (Vec<f64>, bool) {
     let log = String::from_utf8_lossy(&output.stderr);
     let mut values = vec![0.0];
     for line in log.lines() {
-        let Some(position) = line.find("pts_time:") else { continue };
+        let Some(position) = line.find("pts_time:") else {
+            continue;
+        };
         let value = line[position + 9..]
             .split_whitespace()
             .next()
             .and_then(|value| value.parse::<f64>().ok());
         if let Some(value) = value {
-            if value > 0.5 && value < asset.duration && values.last().is_none_or(|last| value - last > 0.75) {
+            if value > 0.5
+                && value < asset.duration
+                && values.last().is_none_or(|last| value - last > 0.75)
+            {
                 values.push(value);
             }
         }
@@ -394,8 +463,8 @@ fn transcribe(asset: &MediaAsset, settings: &AppSettings) -> NativeResult<Vec<Tr
         end: f64,
         text: String,
     }
-    let raw: Vec<RawSegment> =
-        serde_json::from_slice(&output.stdout).map_err(|error| format!("Invalid transcription output: {error}"))?;
+    let raw: Vec<RawSegment> = serde_json::from_slice(&output.stdout)
+        .map_err(|error| format!("Invalid transcription output: {error}"))?;
     Ok(raw
         .into_iter()
         .filter(|segment| !segment.text.trim().is_empty())
@@ -421,7 +490,9 @@ where
     if !progress(0.08, "Creating source poster") {
         return Err("Indexing cancelled".into());
     }
-    asset.poster_path = create_poster(&asset, project_path)?.to_string_lossy().into_owned();
+    asset.poster_path = create_poster(&asset, project_path)?
+        .to_string_lossy()
+        .into_owned();
 
     if !progress(0.20, "Creating playback proxy when needed") {
         return Err("Indexing cancelled".into());
@@ -451,7 +522,11 @@ where
     };
 
     progress(0.94, "Saving Video Map");
-    let status = if warning.is_some() { "partial" } else { "ready" };
+    let status = if warning.is_some() {
+        "partial"
+    } else {
+        "ready"
+    };
     storage::replace_index(project_path, &asset, &scenes, &transcript, status)?;
     asset.index_status = status.into();
     Ok(IndexResult {
@@ -462,7 +537,6 @@ where
     })
 }
 
-
 #[cfg(test)]
 mod source_type_tests {
     use super::*;
@@ -472,7 +546,13 @@ mod source_type_tests {
         assert_eq!(media_kind(Path::new("clip.mkv")), MediaKind::Video);
         assert_eq!(media_kind(Path::new("voice.flac")), MediaKind::Audio);
         assert_eq!(media_kind(Path::new("frame.webp")), MediaKind::Image);
-        assert_eq!(managed_media_directory(Path::new("voice.mp3")), "Media/Audio");
-        assert_eq!(managed_media_directory(Path::new("frame.png")), "Media/Images");
+        assert_eq!(
+            managed_media_directory(Path::new("voice.mp3")),
+            "Media/Audio"
+        );
+        assert_eq!(
+            managed_media_directory(Path::new("frame.png")),
+            "Media/Images"
+        );
     }
 }

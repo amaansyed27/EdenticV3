@@ -15,15 +15,22 @@ use tauri::State;
 use uuid::Uuid;
 
 fn upsert_recent(state: &RuntimeState, summary: ProjectSummary) -> Result<(), String> {
-    let mut data = state.data.lock().map_err(|_| "Settings lock was poisoned".to_string())?;
-    data.recent_projects.retain(|project| project.id != summary.id);
+    let mut data = state
+        .data
+        .lock()
+        .map_err(|_| "Settings lock was poisoned".to_string())?;
+    data.recent_projects
+        .retain(|project| project.id != summary.id);
     data.recent_projects.insert(0, summary);
     data.recent_projects.truncate(40);
     storage::save_global_data(&data)
 }
 
 fn filtered_recents(state: &RuntimeState) -> Result<Vec<ProjectSummary>, String> {
-    let mut data = state.data.lock().map_err(|_| "Settings lock was poisoned".to_string())?;
+    let mut data = state
+        .data
+        .lock()
+        .map_err(|_| "Settings lock was poisoned".to_string())?;
     let mut refreshed = Vec::new();
     for recent in &data.recent_projects {
         let path = Path::new(&recent.path);
@@ -41,7 +48,10 @@ fn filtered_recents(state: &RuntimeState) -> Result<Vec<ProjectSummary>, String>
 #[tauri::command]
 pub fn get_bootstrap(state: State<'_, RuntimeState>) -> Result<BootstrapPayload, String> {
     let projects = filtered_recents(&state)?;
-    let mut data = state.data.lock().map_err(|_| "Settings lock was poisoned".to_string())?;
+    let mut data = state
+        .data
+        .lock()
+        .map_err(|_| "Settings lock was poisoned".to_string())?;
     data.settings.openrouter_configured = openrouter::has_key();
     Ok(BootstrapPayload {
         settings: data.settings.clone(),
@@ -64,9 +74,13 @@ pub fn complete_onboarding(
     state: State<'_, RuntimeState>,
 ) -> Result<BootstrapPayload, String> {
     let root = PathBuf::from(&projects_root);
-    fs::create_dir_all(&root).map_err(|error| format!("Could not create the projects folder: {error}"))?;
+    fs::create_dir_all(&root)
+        .map_err(|error| format!("Could not create the projects folder: {error}"))?;
     {
-        let mut data = state.data.lock().map_err(|_| "Settings lock was poisoned".to_string())?;
+        let mut data = state
+            .data
+            .lock()
+            .map_err(|_| "Settings lock was poisoned".to_string())?;
         data.settings.projects_root = root.to_string_lossy().into_owned();
         data.settings.onboarding_complete = true;
         data.settings.openrouter_configured = openrouter::has_key();
@@ -89,7 +103,10 @@ pub fn save_settings(
     if !["auto", "gpu", "hybrid", "cpu"].contains(&settings.compute_mode.as_str()) {
         return Err("Unknown processing mode".into());
     }
-    let mut data = state.data.lock().map_err(|_| "Settings lock was poisoned".to_string())?;
+    let mut data = state
+        .data
+        .lock()
+        .map_err(|_| "Settings lock was poisoned".to_string())?;
     data.settings = settings.clone();
     storage::save_global_data(&data)?;
     Ok(settings)
@@ -105,7 +122,10 @@ pub fn create_project(
         return Err("Enter a valid project name".into());
     }
     let projects_root = {
-        let data = state.data.lock().map_err(|_| "Settings lock was poisoned".to_string())?;
+        let data = state
+            .data
+            .lock()
+            .map_err(|_| "Settings lock was poisoned".to_string())?;
         PathBuf::from(&data.settings.projects_root)
     };
     fs::create_dir_all(&projects_root).map_err(|error| error.to_string())?;
@@ -196,8 +216,12 @@ pub fn get_project_snapshot(
 
 #[tauri::command]
 pub fn forget_project(project_id: String, state: State<'_, RuntimeState>) -> Result<bool, String> {
-    let mut data = state.data.lock().map_err(|_| "Settings lock was poisoned".to_string())?;
-    data.recent_projects.retain(|project| project.id != project_id);
+    let mut data = state
+        .data
+        .lock()
+        .map_err(|_| "Settings lock was poisoned".to_string())?;
+    data.recent_projects
+        .retain(|project| project.id != project_id);
     storage::save_global_data(&data)?;
     Ok(true)
 }
@@ -210,8 +234,7 @@ pub fn import_media(
     let project_path = PathBuf::from(project_path);
     let manifest = storage::load_manifest(&project_path)?;
     const VIDEO: &[&str] = &[
-        "mp4", "mov", "mkv", "avi", "webm", "m4v", "mpeg", "mpg", "wmv", "flv",
-        "ts", "m2ts", "3gp",
+        "mp4", "mov", "mkv", "avi", "webm", "m4v", "mpeg", "mpg", "wmv", "flv", "ts", "m2ts", "3gp",
     ];
     const AUDIO: &[&str] = &[
         "wav", "mp3", "m4a", "aac", "flac", "ogg", "opus", "wma", "aiff", "aif",
@@ -265,7 +288,10 @@ pub fn import_media(
         .find(|asset| !asset.poster_path.is_empty())
         .map(|asset| asset.poster_path.clone())
         .unwrap_or_default();
-    upsert_recent(&state, manifest.summary(&project_path, all_assets.len(), thumbnail))?;
+    upsert_recent(
+        &state,
+        manifest.summary(&project_path, all_assets.len(), thumbnail),
+    )?;
     Ok(imported)
 }
 
@@ -303,10 +329,15 @@ pub fn import_context_file(project_path: String) -> Result<Option<ProjectContext
     else {
         return Ok(None);
     };
-    let content = fs::read_to_string(&path).map_err(|error| format!("Could not read context: {error}"))?;
+    let content =
+        fs::read_to_string(&path).map_err(|error| format!("Could not read context: {error}"))?;
     let context = ProjectContext {
         id: Uuid::new_v4().to_string(),
-        name: path.file_stem().unwrap_or_default().to_string_lossy().into_owned(),
+        name: path
+            .file_stem()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .into_owned(),
         source: "file".into(),
         content,
         created_at: Utc::now().to_rfc3339(),
@@ -322,9 +353,15 @@ pub fn import_context_file(project_path: String) -> Result<Option<ProjectContext
 }
 
 #[tauri::command]
-pub fn save_openrouter_key(api_key: String, state: State<'_, RuntimeState>) -> Result<serde_json::Value, String> {
+pub fn save_openrouter_key(
+    api_key: String,
+    state: State<'_, RuntimeState>,
+) -> Result<serde_json::Value, String> {
     openrouter::save_key(api_key.trim())?;
-    let mut data = state.data.lock().map_err(|_| "Settings lock was poisoned".to_string())?;
+    let mut data = state
+        .data
+        .lock()
+        .map_err(|_| "Settings lock was poisoned".to_string())?;
     data.settings.openrouter_configured = true;
     storage::save_global_data(&data)?;
     Ok(serde_json::json!({ "configured": true }))
@@ -333,7 +370,10 @@ pub fn save_openrouter_key(api_key: String, state: State<'_, RuntimeState>) -> R
 #[tauri::command]
 pub fn delete_openrouter_key(state: State<'_, RuntimeState>) -> Result<serde_json::Value, String> {
     openrouter::delete_key()?;
-    let mut data = state.data.lock().map_err(|_| "Settings lock was poisoned".to_string())?;
+    let mut data = state
+        .data
+        .lock()
+        .map_err(|_| "Settings lock was poisoned".to_string())?;
     data.settings.openrouter_configured = false;
     storage::save_global_data(&data)?;
     Ok(serde_json::json!({ "configured": false }))

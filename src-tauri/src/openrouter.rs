@@ -30,13 +30,17 @@ pub fn save_key(api_key: &str) -> NativeResult<()> {
     let restored = read_key()
         .map_err(|error| format!("The key was written but could not be read back: {error}"))?;
     if restored != api_key {
-        return Err("Windows Credential Manager returned a different credential after saving".into());
+        return Err(
+            "Windows Credential Manager returned a different credential after saving".into(),
+        );
     }
     Ok(())
 }
 
 pub fn read_key() -> NativeResult<String> {
-    entry()?.get_password().map_err(|_| "No OpenRouter API key is configured".into())
+    entry()?
+        .get_password()
+        .map_err(|_| "No OpenRouter API key is configured".into())
 }
 
 pub fn delete_key() -> NativeResult<()> {
@@ -88,7 +92,10 @@ fn fetch_models() -> NativeResult<Vec<ModelResponse>> {
         .send()
         .map_err(|error| format!("Could not reach OpenRouter: {error}"))?;
     if !response.status().is_success() {
-        return Err(format!("OpenRouter rejected the request ({})", response.status()));
+        return Err(format!(
+            "OpenRouter rejected the request ({})",
+            response.status()
+        ));
     }
     response
         .json::<ModelsResponse>()
@@ -106,12 +113,18 @@ pub fn test_connection() -> NativeResult<OpenRouterStatus> {
         .send()
         .map_err(|error| format!("Could not reach OpenRouter: {error}"))?;
     if !response.status().is_success() {
-        return Err(format!("OpenRouter rejected this API key ({})", response.status()));
+        return Err(format!(
+            "OpenRouter rejected this API key ({})",
+            response.status()
+        ));
     }
     let models = fetch_models()?;
     Ok(OpenRouterStatus {
         ok: true,
-        message: format!("Connected to OpenRouter · {} models available", models.len()),
+        message: format!(
+            "Connected to OpenRouter · {} models available",
+            models.len()
+        ),
         model_count: models.len(),
     })
 }
@@ -123,7 +136,8 @@ pub fn list_models() -> NativeResult<Vec<OpenRouterModel>> {
             let is_free = model.id.ends_with(":free")
                 || model.id == "openrouter/free"
                 || model.pricing.as_ref().is_some_and(|pricing| {
-                    pricing.prompt.as_deref() == Some("0") && pricing.completion.as_deref() == Some("0")
+                    pricing.prompt.as_deref() == Some("0")
+                        && pricing.completion.as_deref() == Some("0")
                 });
             OpenRouterModel {
                 id: model.id,
@@ -136,7 +150,12 @@ pub fn list_models() -> NativeResult<Vec<OpenRouterModel>> {
             }
         })
         .collect::<Vec<_>>();
-    models.sort_by(|left, right| right.is_free.cmp(&left.is_free).then(left.name.cmp(&right.name)));
+    models.sort_by(|left, right| {
+        right
+            .is_free
+            .cmp(&left.is_free)
+            .then(left.name.cmp(&right.name))
+    });
     Ok(models)
 }
 
@@ -144,17 +163,27 @@ pub fn validate_model_capabilities(model_id: &str, requires_images: bool) -> Nat
     if model_id == "openrouter/free" {
         return Ok(());
     }
-    let model = fetch_models()?.into_iter().find(|model| model.id == model_id)
+    let model = fetch_models()?
+        .into_iter()
+        .find(|model| model.id == model_id)
         .ok_or_else(|| format!("The configured OpenRouter model '{model_id}' is unavailable"))?;
-    if requires_images && !model.architecture.input_modalities.iter().any(|value| value == "image") {
+    if requires_images
+        && !model
+            .architecture
+            .input_modalities
+            .iter()
+            .any(|value| value == "image")
+    {
         return Err(format!(
             "The configured model '{}' cannot inspect images. Choose a vision-capable model in Settings.",
             model.name
         ));
     }
-    if !model.supported_parameters.iter().any(|value|
-        value == "response_format" || value == "structured_outputs"
-    ) {
+    if !model
+        .supported_parameters
+        .iter()
+        .any(|value| value == "response_format" || value == "structured_outputs")
+    {
         return Err(format!(
             "The configured model '{}' does not advertise structured outputs. Choose a model with response_format support.",
             model.name
@@ -189,17 +218,26 @@ where
     let response = reqwest::blocking::Client::builder()
         .connect_timeout(Duration::from_secs(20))
         .timeout(Duration::from_secs(360))
-        .build().map_err(|error| error.to_string())?
+        .build()
+        .map_err(|error| error.to_string())?
         .post("https://openrouter.ai/api/v1/chat/completions")
         .bearer_auth(read_key()?)
         .header("HTTP-Referer", "https://dawnlightlabs.com")
         .header("X-OpenRouter-Title", "Edentic")
         .json(&request)
-        .send().map_err(|error| format!("Could not reach OpenRouter: {error}"))?;
+        .send()
+        .map_err(|error| format!("Could not reach OpenRouter: {error}"))?;
     if !response.status().is_success() {
         let status = response.status();
-        let detail = response.text().unwrap_or_default().chars().take(800).collect::<String>();
-        return Err(format!("OpenRouter rejected the request ({status}): {detail}"));
+        let detail = response
+            .text()
+            .unwrap_or_default()
+            .chars()
+            .take(800)
+            .collect::<String>();
+        return Err(format!(
+            "OpenRouter rejected the request ({status}): {detail}"
+        ));
     }
     let mut result = String::new();
     for line in BufReader::new(response).lines() {
@@ -207,19 +245,32 @@ where
             return Err("Remote request cancelled".into());
         }
         let line = line.map_err(|error| format!("OpenRouter stream failed: {error}"))?;
-        let Some(data) = line.strip_prefix("data:") else { continue };
+        let Some(data) = line.strip_prefix("data:") else {
+            continue;
+        };
         let data = data.trim();
-        if data == "[DONE]" { break; }
-        let Ok(event) = serde_json::from_str::<Value>(data) else { continue };
+        if data == "[DONE]" {
+            break;
+        }
+        let Ok(event) = serde_json::from_str::<Value>(data) else {
+            continue;
+        };
         if let Some(error) = event.get("error") {
             return Err(format!("OpenRouter stream error: {error}"));
         }
-        if let Some(content) = event.pointer("/choices/0/delta/content").and_then(Value::as_str) {
+        if let Some(content) = event
+            .pointer("/choices/0/delta/content")
+            .and_then(Value::as_str)
+        {
             result.push_str(content);
             on_chunk(content);
         }
     }
-    if cancelled() { return Err("Remote request cancelled".into()); }
-    if result.trim().is_empty() { return Err("OpenRouter returned no structured response".into()); }
+    if cancelled() {
+        return Err("Remote request cancelled".into());
+    }
+    if result.trim().is_empty() {
+        return Err("OpenRouter returned no structured response".into());
+    }
     Ok(result)
 }
