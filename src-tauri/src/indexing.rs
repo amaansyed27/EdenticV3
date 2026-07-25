@@ -359,7 +359,7 @@ where
             label: "Still image".into(),
             thumbnail_path: asset.poster_path.clone(),
         }];
-        if !progress(0.94, "Saving image map") {
+        if !progress(0.94, "Saving image preview") {
             return Err("Indexing cancelled".into());
         }
         let status = if warnings.is_empty() { "ready" } else { "partial" };
@@ -468,6 +468,12 @@ pub fn start_index(
 ) -> Result<IndexJob, String> {
     let path = PathBuf::from(&project_path);
     let asset = storage::find_asset(&path, &asset_id)?;
+    let source_label = match media::media_kind(Path::new(&asset.managed_path)) {
+        MediaKind::Video => "Video Map",
+        MediaKind::Audio => "Audio Map",
+        MediaKind::Image => "Image preview",
+    }
+    .to_string();
     let settings = state
         .data
         .lock()
@@ -480,7 +486,7 @@ pub fn start_index(
         asset_id: asset_id.clone(),
         status: "queued".into(),
         progress: 0.0,
-        stage: "Waiting to index".into(),
+        stage: "Waiting to prepare source".into(),
         error: String::new(),
         started_at: Utc::now().to_rfc3339(),
         finished_at: None,
@@ -532,9 +538,9 @@ pub fn start_index(
                     job.status = "completed".into();
                     job.progress = 1.0;
                     job.stage = if warning.is_some() {
-                        "Video Map ready with warnings".into()
+                        format!("{source_label} ready with warnings")
                     } else {
-                        "Video Map ready".into()
+                        format!("{source_label} ready")
                     };
                     job.error = warning.unwrap_or_default();
                     job.finished_at = Some(Utc::now().to_rfc3339());
@@ -545,7 +551,7 @@ pub fn start_index(
                     if job.status != "cancelled" {
                         job.status = "failed".into();
                     }
-                    job.stage = "Indexing stopped".into();
+                    job.stage = "Source processing stopped".into();
                     job.error = error;
                     job.finished_at = Some(Utc::now().to_rfc3339());
                 });
